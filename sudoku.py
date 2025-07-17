@@ -1,20 +1,46 @@
 import random
+import pygame
 
-def generate_board(end = 0):
+# pygame setup
+pygame.init()
+pygame.display.set_caption("Sudoku")
+width = 800
+height = 800
+screen = pygame.display.set_mode(size=(width, height))
+clock = pygame.time.Clock()
+font_size = 32
+font = pygame.font.SysFont("arial", font_size)
+
+white = (255, 255, 255)
+black = (0, 0, 0)
+
+screen.fill(white)
+
+#sudoku functions -------------------------
+
+def generate_board(end = 0, graphics = True):
     # generate a solved sudoku
+
     print("Generating solved sukodu...")
+    if graphics:
+        text = font.render("Generating solved sudoku...", True, black, white)
+        rectangle = text.get_rect()
+        rectangle.center = (width // 2, height // 2)
+        screen.blit(text, rectangle)
+        pygame.display.update()
+
     board = [0] * 81
     fixed = [True] * 81
     row = 0
     stuck_row = 0
-    stuck_counter = 0   
-    while not full_board(board):       
+    stuck_counter = 0
+    while not full_board(board):
         try:
             for i in range(9):
                 # set cell to random from available
                 available = get_available(board, row * 9 + i)
                 board[row * 9 + i] = random.choice(available)
-            row += 1          
+            row += 1
             if row - stuck_row >= 2:
                 stuck_row = row
             else:
@@ -24,7 +50,7 @@ def generate_board(end = 0):
                 board = [0] * 81
                 row = 0
                 stuck_row = 0
-                stuck_counter = 0              
+                stuck_counter = 0
         except:
             # out of options, go back one row
             for i in range(9):
@@ -33,8 +59,22 @@ def generate_board(end = 0):
     # remove numbers randomly until limit for how many numbers to check is reached
     remaining = [i for i in range(81)]
     print("Removing numbers...")
-    while len(remaining) > end:    
+    while len(remaining) > end:
+
         print(f"{len(remaining)} / {81 - end} remain ", end="\r")
+        if graphics:
+            screen.fill(white)
+            text_g = font.render("Solved sudoku generated", True, black)
+            text_r = font.render("Removing numbers...", True, black)
+            text_p = font.render(f"{len(remaining)} / {81 - end} remain", True, black)
+            rectangle_g = text_g.get_rect(center = (width // 2, height // 2 - (font_size + 4)))
+            rectangle_r = text_r.get_rect(center = (width // 2, height // 2))
+            rectangle_p = text_p.get_rect(center = (width // 2, height // 2 + (font_size + 4)))
+            screen.blit(text_g, rectangle_g)
+            screen.blit(text_r, rectangle_r)
+            screen.blit(text_p, rectangle_p)
+            pygame.display.update()
+
         remove = random.choice(remaining)
         remaining.remove(remove)
         old_value = board[remove]
@@ -47,7 +87,7 @@ def generate_board(end = 0):
             fixed[remove] = 0
     print("\r              ")
     return board, fixed
-    
+
 def solve_board(board, limit = 2, solutions = None):
     if solutions is None:
         solutions = []
@@ -79,7 +119,7 @@ def valid_board(board):
     for i in range(81):
         value = board[i]
         if value == 0:
-            continue   
+            continue
         if conflicts(board, i, value):
             return False
     return True
@@ -94,37 +134,65 @@ def conflicts(board, index, value):
         if idx_row != index and board[idx_row] == value:
             return True
         elif idx_col != index and board[idx_col] == value:
-            return True  
+            return True
         elif idx_block != index and board[idx_block] == value:
-            return True       
+            return True
     return False
 
 def full_board(board):
     return all(map(lambda c: c != 0, board))
 
-def print_board(board: list[object]):
-    section = ""
-    for i in range(81):
-        value = board[i]
-        value = value if value != 0 else "."
-        section += f"{value} "
-        if (i + 1) % 3 == 0 and (i + 1) % 9 != 0:
-            section += "|"        
-        if i % (3 * 9) == 0 and i > 0:
-            print("--------" + "+---------" * 2)
-        if (i + 1) % 9 == 0:
-            print(section)
-            section = ""
-        else:
-            section += " "       
+def print_board(board, graphics = True, hover = None):
+    if not graphics:
+        section = ""
+        for i in range(81):
+            value = board[i]
+            value = value if value != 0 else "."
+            section += f"{value} "
+            if (i + 1) % 3 == 0 and (i + 1) % 9 != 0:
+                section += "|"
+            if i % (3 * 9) == 0 and i > 0:
+                print("--------" + "+---------" * 2)
+            if (i + 1) % 9 == 0:
+                print(section)
+                section = ""
+            else:
+                section += " "
+    else:
+        padding = 100
+        for i in range(10):
+            if i % 3 == 0:
+                line_width = 3
+            else:
+                line_width = 1
+            pygame.draw.line(screen, black,
+                             (i * (width - padding * 2) / 9 + padding, padding),
+                             (i * (width - padding * 2) / 9 + padding, height - padding), line_width)
+            pygame.draw.line(screen, black,
+                             (padding, i * (height - padding * 2) / 9 + padding),
+                             (width - padding, i * (height - padding * 2) / 9 + padding), line_width)
+        for i in range(81):
+            value = board[i]
+            if value == 0:
+                continue
+            text = font.render(f"{value}", True, black)
+            rectangle = text.get_rect(center = (
+                (i % 9 + 0.5) * (width - padding * 2) / 9 + padding,
+                (i // 9 + 0.5) * (height - padding * 2) / 9 + padding
+            ))
+            screen.blit(text, rectangle)
 
+# -------------------------
+
+# sudoku setup
 board, fixed = generate_board()
+print_board(board, False)
 
-# for i in range(0, 27):
-#     board[i]["value"] = 0
-# solutions = solve_board(board[:], 2)
-# print(len(solutions))
+# game loop
+while True:
+    screen.fill(white)
 
-print_board(board)
+    print_board(board)
 
-# print(valid_board(board))
+    pygame.display.update()
+    clock.tick(60)
