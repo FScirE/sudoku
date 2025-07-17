@@ -2,6 +2,8 @@ import random
 import threading
 import pygame
 m = threading.Lock()
+filled = False
+correct = False
 
 # pygame setup
 pygame.init()
@@ -247,6 +249,15 @@ print_board(board, fixed, False)
 while True:
     screen.fill(white)
 
+    filled = full_board(board)
+    correct = valid_board(board)
+
+    if filled:
+        if correct:
+            break
+        else:
+            pass
+
     mouse = pygame.mouse.get_pos()
     m_x = mouse[0]
     m_y = mouse[1]
@@ -276,3 +287,21 @@ while True:
 
     pygame.display.update()
     clock.tick(60)
+
+# win screen
+while True:
+    screen.fill(white)
+
+    text = font.render("Congratulations!", True, black)
+    rectangle = text.get_rect(center = (width // 2, height // 2))
+    screen.blit(text, rectangle)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                pygame.quit()
+
+    pygame.display.update()
+    clock.tick(30)
