@@ -8,10 +8,14 @@ width = 800
 height = 800
 screen = pygame.display.set_mode(size=(width, height))
 clock = pygame.time.Clock()
+
+padding = 100
 font_size = 32
 font = pygame.font.SysFont("arial", font_size)
 
 white = (255, 255, 255)
+light_blue = (210, 250, 255)
+dark_blue = (0, 90, 180)
 black = (0, 0, 0)
 
 screen.fill(white)
@@ -159,7 +163,26 @@ def print_board(board, graphics = True, hover = None):
             else:
                 section += " "
     else:
-        padding = 100
+        for i in range(81):
+            cell_w = (width - padding * 2) / 9
+            cell_h = (height - padding * 2) / 9
+            if hover is not None and i == hover:
+                rect = pygame.rect.Rect(
+                    (i % 9) * cell_w + padding,
+                    (i // 9) * cell_h + padding,
+                    cell_w,
+                    cell_h
+                )
+                pygame.draw.rect(screen, light_blue, rect)
+            value = board[i]
+            if value == 0:
+                continue
+            text = font.render(f"{value}", True, black)
+            rectangle = text.get_rect(center = (
+                (i % 9 + 0.5) * cell_w + padding,
+                (i // 9 + 0.5) * cell_h + padding
+            ))
+            screen.blit(text, rectangle)
         for i in range(10):
             if i % 3 == 0:
                 line_width = 3
@@ -171,16 +194,6 @@ def print_board(board, graphics = True, hover = None):
             pygame.draw.line(screen, black,
                              (padding, i * (height - padding * 2) / 9 + padding),
                              (width - padding, i * (height - padding * 2) / 9 + padding), line_width)
-        for i in range(81):
-            value = board[i]
-            if value == 0:
-                continue
-            text = font.render(f"{value}", True, black)
-            rectangle = text.get_rect(center = (
-                (i % 9 + 0.5) * (width - padding * 2) / 9 + padding,
-                (i // 9 + 0.5) * (height - padding * 2) / 9 + padding
-            ))
-            screen.blit(text, rectangle)
 
 # -------------------------
 
@@ -192,7 +205,24 @@ print_board(board, False)
 while True:
     screen.fill(white)
 
-    print_board(board)
+    mouse = pygame.mouse.get_pos()
+    m_x = mouse[0]
+    m_y = mouse[1]
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                pygame.quit()
+
+    hover = None
+    if m_x > padding and m_x < width - padding and m_y > padding and m_y < height - padding:
+        row = ((m_y - padding) * 9) // (height - padding * 2)
+        col = ((m_x - padding) * 9) // (width - padding * 2)
+        hover = row * 9 + col
+
+    print_board(board, hover=hover)
 
     pygame.display.update()
     clock.tick(60)
