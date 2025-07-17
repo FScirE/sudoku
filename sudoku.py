@@ -1,5 +1,7 @@
 import random
+import threading
 import pygame
+m = threading.Lock()
 
 # pygame setup
 pygame.init()
@@ -22,7 +24,7 @@ screen.fill(white)
 
 #sudoku functions -------------------------
 
-def generate_board(end = 0, graphics = True):
+def generate_board(end = 0, graphics = True, multithread = True):
     # generate a solved sudoku
 
     print("Generating solved sukodu...")
@@ -79,18 +81,57 @@ def generate_board(end = 0, graphics = True):
             screen.blit(text_p, rectangle_p)
             pygame.display.update()
 
-        remove = random.choice(remaining)
-        remaining.remove(remove)
-        old_value = board[remove]
-        board[remove] = 0
-        if (len(solve_board(board[:])) > 1):
-            # board value cant be removed
-            board[remove] = old_value
+        if multithread:
+            threads = []
+            options = []
+            # start looking for multiple values to remove simultaneously
+            num_remaining = len(remaining)
+            if num_remaining > 36:
+                num_threads = 1
+            elif num_remaining > 16:
+                num_threads = 16
+            else:
+                num_threads = num_remaining
+            for i in range(num_threads):
+                t = threading.Thread(target=thread_work, args=(board[:], remaining, options,))
+                t.start()
+                threads.append(t)
+            for t in threads:
+                t.join()
+            # remove first option
+            if options:
+                remove = options[0]
+                board[remove] = 0
+                fixed[remove] = False
+                remaining.remove(remove)
         else:
-            # finish removing value
-            fixed[remove] = 0
+            remove = random.choice(remaining)
+            remaining.remove(remove)
+            old_value = board[remove]
+            board[remove] = 0
+            if (len(solve_board(board[:])) > 1):
+                # board value cant be removed
+                board[remove] = old_value
+            else:
+                # finish removing value
+                fixed[remove] = False
     print("\r              ")
     return board, fixed
+
+def thread_work(board, remaining, options):
+    # get random index
+    m.acquire()
+    index = random.choice(remaining)
+    remaining.remove(index)
+    m.release()
+    # remove cell value
+    board[index] = 0
+    # one solution -> to be added to list of possible removals for main thread
+    if len(solve_board(board)) <= 1:
+        m.acquire()
+        remaining.append(index)
+        options.append(index)
+        m.release()
 
 def solve_board(board, limit = 2, solutions = None):
     if solutions is None:
@@ -146,7 +187,7 @@ def conflicts(board, index, value):
 def full_board(board):
     return all(map(lambda c: c != 0, board))
 
-def print_board(board, graphics = True, hover = None):
+def print_board(board, fixed, graphics = True, hover = None):
     if not graphics:
         section = ""
         for i in range(81):
@@ -175,9 +216,10 @@ def print_board(board, graphics = True, hover = None):
                 )
                 pygame.draw.rect(screen, light_blue, rect)
             value = board[i]
+            color = black if fixed[i] else dark_blue
             if value == 0:
                 continue
-            text = font.render(f"{value}", True, black)
+            text = font.render(f"{value}", True, color)
             rectangle = text.get_rect(center = (
                 (i % 9 + 0.5) * cell_w + padding,
                 (i // 9 + 0.5) * cell_h + padding
@@ -199,7 +241,7 @@ def print_board(board, graphics = True, hover = None):
 
 # sudoku setup
 board, fixed = generate_board()
-print_board(board, False)
+print_board(board, fixed, False)
 
 # game loop
 while True:
@@ -209,20 +251,28 @@ while True:
     m_x = mouse[0]
     m_y = mouse[1]
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                pygame.quit()
-
     hover = None
     if m_x > padding and m_x < width - padding and m_y > padding and m_y < height - padding:
         row = ((m_y - padding) * 9) // (height - padding * 2)
         col = ((m_x - padding) * 9) // (width - padding * 2)
         hover = row * 9 + col
 
-    print_board(board, hover=hover)
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                pygame.quit()
+            if hover is not None and not fixed[hover]:
+                key = event.unicode
+                # setting number
+                if key.isnumeric():
+                    board[hover] = int(key)
+                # ereasing
+                elif event.key in [pygame.K_BACKSPACE, pygame.K_SPACE]:
+                    board[hover] = 0
+
+    print_board(board, fixed, hover=hover)
 
     pygame.display.update()
     clock.tick(60)
