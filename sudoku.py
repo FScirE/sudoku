@@ -1,4 +1,5 @@
 import random
+import copy
 import threading
 import pygame
 m = threading.Lock()
@@ -10,15 +11,19 @@ pygame.init()
 pygame.display.set_caption("Sudoku")
 width = 800
 height = 800
-screen = pygame.display.set_mode(size=(width, height))
+screen = pygame.display.set_mode((width, height))
 clock = pygame.time.Clock()
 
 padding = 100
+note_padding = 4
 font_size = 32
 font = pygame.font.SysFont("arial", font_size)
+small_font = pygame.font.SysFont("arial", font_size // 2)
 
+transparent_white = (255, 255, 255, 128)
 white = (255, 255, 255)
-light_blue = (210, 250, 255)
+light_blue = (230, 245, 255)
+medium_blue = (105, 160, 210)
 dark_blue = (0, 90, 180)
 black = (0, 0, 0)
 
@@ -189,7 +194,7 @@ def conflicts(board, index, value):
 def full_board(board):
     return all(map(lambda c: c != 0, board))
 
-def print_board(board, fixed, graphics = True, hover = None):
+def print_board(board, fixed, notes, graphics = True, hover = None):
     if not graphics:
         section = ""
         for i in range(81):
@@ -209,6 +214,7 @@ def print_board(board, fixed, graphics = True, hover = None):
         for i in range(81):
             cell_w = (width - padding * 2) / 9
             cell_h = (height - padding * 2) / 9
+            # draw hover marking
             if hover is not None and i == hover:
                 rect = pygame.rect.Rect(
                     (i % 9) * cell_w + padding,
@@ -217,6 +223,18 @@ def print_board(board, fixed, graphics = True, hover = None):
                     cell_h
                 )
                 pygame.draw.rect(screen, light_blue, rect)
+            # draw notes
+            cell_notes = notes[i]
+            for note in cell_notes:
+                note_col = (note - 1) % 3
+                note_row = (note - 1) // 3
+                text = small_font.render(f"{note}", True, medium_blue)
+                rectangle = text.get_rect(center = (
+                    (i % 9 + 0.5) * cell_w + padding + (note_col - 1) * (cell_w - note_padding * 2) // 3,
+                    (i // 9 + 0.5) * cell_h + padding + (1 - note_row) * (cell_h - note_padding * 2) // 3
+                ))
+                screen.blit(text, rectangle)
+            # draw cell values
             value = board[i]
             color = black if fixed[i] else dark_blue
             if value == 0:
@@ -227,6 +245,7 @@ def print_board(board, fixed, graphics = True, hover = None):
                 (i // 9 + 0.5) * cell_h + padding
             ))
             screen.blit(text, rectangle)
+        # draw grid
         for i in range(10):
             if i % 3 == 0:
                 line_width = 3
@@ -243,7 +262,9 @@ def print_board(board, fixed, graphics = True, hover = None):
 
 # sudoku setup
 board, fixed = generate_board()
-print_board(board, fixed, False)
+notes = [[] for _ in range(81)]
+print_board(board, fixed, notes, False)
+history = []
 
 # game loop
 while True:
@@ -271,19 +292,52 @@ while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
+            exit()
         elif event.type == pygame.KEYDOWN:
+            mods = pygame.key.get_mods()
             if event.key == pygame.K_ESCAPE:
                 pygame.quit()
+                exit()
+            if event.key == pygame.K_z and event.mod & pygame.KMOD_CTRL:
+                if history:
+                    popped = history.pop()
+                    board = popped[0]
+                    notes = popped[1]
+                continue
             if hover is not None and not fixed[hover]:
-                key = event.unicode
-                # setting number
-                if key.isnumeric():
-                    board[hover] = int(key)
+                board_old = board[:]
+                notes_old = copy.deepcopy(notes)
                 # ereasing
-                elif event.key in [pygame.K_BACKSPACE, pygame.K_SPACE]:
+                if event.key in [pygame.K_BACKSPACE, pygame.K_SPACE, pygame.K_0, pygame.K_KP0]:
                     board[hover] = 0
+                    notes[hover] = []
+                # setting number
+                elif pygame.K_0 <= event.key <= pygame.K_9 or pygame.K_KP0 <= event.key <= pygame.K_KP9:
+                    if pygame.K_0 <= event.key <= pygame.K_9:
+                        number = event.key - pygame.K_0
+                    else:
+                        number = event.key - pygame.K_KP0
+                    if event.mod & pygame.KMOD_SHIFT:
+                        # add note
+                        if number not in notes[hover]:
+                            notes[hover].append(number)
+                        # remove note
+                        else:
+                            notes[hover].remove(number)
+                    elif board[hover] != number:
+                        board[hover] = number
+                        notes[hover] = []
+                else:
+                    continue
+                # add to history
+                if board == board_old and notes == notes_old:
+                    pass
+                elif history and board == history[-1][0] and notes == history[-1][1]:
+                    history.pop()
+                else:
+                    history.append((board_old, notes_old))
 
-    print_board(board, fixed, hover=hover)
+    print_board(board, fixed, notes, hover=hover)
 
     pygame.display.update()
     clock.tick(60)
@@ -292,16 +346,24 @@ while True:
 while True:
     screen.fill(white)
 
-    text = font.render("Congratulations!", True, black)
-    rectangle = text.get_rect(center = (width // 2, height // 2))
+    print_board(board, fixed)
+
+    layer = pygame.surface.Surface((width, height), pygame.SRCALPHA)
+    layer.fill(transparent_white)
+    screen.blit(layer, (0, 0))
+
+    text = font.render("Congratulations!", True, black, white)
+    rectangle = text.get_rect(center = (width // 2, padding // 2))
     screen.blit(text, rectangle)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
+            exit()
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 pygame.quit()
+                exit()
 
     pygame.display.update()
     clock.tick(30)
