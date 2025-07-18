@@ -1,3 +1,4 @@
+import sys
 import random
 import copy
 import threading
@@ -292,12 +293,12 @@ while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
-            exit()
+            sys.exit()
         elif event.type == pygame.KEYDOWN:
             mods = pygame.key.get_mods()
             if event.key == pygame.K_ESCAPE:
                 pygame.quit()
-                exit()
+                sys.exit()
             if event.key == pygame.K_z and event.mod & pygame.KMOD_CTRL:
                 if history:
                     popped = history.pop()
@@ -346,7 +347,7 @@ while True:
 while True:
     screen.fill(white)
 
-    print_board(board, fixed)
+    print_board(board, fixed, notes)
 
     layer = pygame.surface.Surface((width, height), pygame.SRCALPHA)
     layer.fill(transparent_white)
@@ -359,11 +360,11 @@ while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
-            exit()
+            sys.exit()
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 pygame.quit()
-                exit()
+                sys.exit()
 
     pygame.display.update()
     clock.tick(30)
