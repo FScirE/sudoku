@@ -3,9 +3,9 @@ import random
 import copy
 import threading
 import pygame
-m = threading.Lock()
-filled = False
-correct = False
+mutex = threading.Lock()
+atomic_lock = threading.Lock()
+atomic_counter = 0
 
 # pygame setup
 pygame.init()
@@ -32,17 +32,8 @@ screen.fill(white)
 
 #sudoku functions -------------------------
 
-def generate_board(end = 0, graphics = True, multithread = True):
+def generate_completed_board():
     # generate a solved sudoku
-
-    print("Generating solved sukodu...")
-    if graphics:
-        text = font.render("Generating solved sudoku...", True, black, white)
-        rectangle = text.get_rect()
-        rectangle.center = (width // 2, height // 2)
-        screen.blit(text, rectangle)
-        pygame.display.update()
-
     board = [0] * 81
     fixed = [True] * 81
     row = 0
@@ -70,25 +61,16 @@ def generate_board(end = 0, graphics = True, multithread = True):
             for i in range(9):
                 board[row * 9 + i] = 0
             row -= 1
+    return board, fixed
+
+def remove_board_numbers(board, fixed, end = 0, multithread = True):
+    global atomic_counter
     # remove numbers randomly until limit for how many numbers to check is reached
     remaining = [i for i in range(81)]
-    print("Removing numbers...")
     while len(remaining) > end:
-
-        print(f"{len(remaining)} / {81 - end} remain ", end="\r")
-        if graphics:
-            screen.fill(white)
-            text_g = font.render("Solved sudoku generated", True, black)
-            text_r = font.render("Removing numbers...", True, black)
-            text_p = font.render(f"{len(remaining)} / {81 - end} remain", True, black)
-            rectangle_g = text_g.get_rect(center = (width // 2, height // 2 - (font_size + 4)))
-            rectangle_r = text_r.get_rect(center = (width // 2, height // 2))
-            rectangle_p = text_p.get_rect(center = (width // 2, height // 2 + (font_size + 4)))
-            screen.blit(text_g, rectangle_g)
-            screen.blit(text_r, rectangle_r)
-            screen.blit(text_p, rectangle_p)
-            pygame.display.update()
-
+        atomic_lock.acquire()
+        atomic_counter = len(remaining) - end
+        atomic_lock.release()
         if multithread:
             threads = []
             options = []
@@ -100,7 +82,7 @@ def generate_board(end = 0, graphics = True, multithread = True):
                 num_threads = 16
             else:
                 num_threads = num_remaining
-            for i in range(num_threads):
+            for _ in range(num_threads):
                 t = threading.Thread(target=thread_work, args=(board[:], remaining, options,))
                 t.start()
                 threads.append(t)
@@ -124,22 +106,21 @@ def generate_board(end = 0, graphics = True, multithread = True):
                 # finish removing value
                 fixed[remove] = False
     print("\r              ")
-    return board, fixed
 
 def thread_work(board, remaining, options):
     # get random index
-    m.acquire()
+    mutex.acquire()
     index = random.choice(remaining)
     remaining.remove(index)
-    m.release()
+    mutex.release()
     # remove cell value
     board[index] = 0
     # one solution -> to be added to list of possible removals for main thread
     if len(solve_board(board)) <= 1:
-        m.acquire()
+        mutex.acquire()
         remaining.append(index)
         options.append(index)
-        m.release()
+        mutex.release()
 
 def solve_board(board, limit = 2, solutions = None):
     if solutions is None:
@@ -259,15 +240,55 @@ def print_board(board, fixed, notes, graphics = True, hover = None):
                              (padding, i * (height - padding * 2) / 9 + padding),
                              (width - padding, i * (height - padding * 2) / 9 + padding), line_width)
 
+def check_quit(threads = None):
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+            if threads:
+                screen.fill(white)
+                text = font.render("Closing...", True, black)
+                rectangle = text.get_rect(center = (width // 2, height // 2))
+                screen.blit(text, rectangle)
+                pygame.display.update()
+                for t in threads:
+                    t.join()
+            pygame.quit()
+            sys.exit()
+
 # -------------------------
 
 # sudoku setup
-board, fixed = generate_board()
+print("Generating completed board...")
+board, fixed = generate_completed_board()
+
+thread = threading.Thread(target=remove_board_numbers, args=(board, fixed,))
+thread.start()
+while thread.is_alive():
+    screen.fill(white)
+
+    text_g = font.render("Solved sudoku generated", True, black)
+    text_r = font.render("Removing numbers...", True, black)
+    atomic_lock.acquire()
+    text_p = font.render(f"Remaining: {atomic_counter}", True, black)
+    atomic_lock.release()
+    rectangle_g = text_g.get_rect(center = (width // 2, height // 2 - (font_size + 4)))
+    rectangle_r = text_r.get_rect(center = (width // 2, height // 2))
+    rectangle_p = text_p.get_rect(center = (width // 2, height // 2 + (font_size + 4)))
+    screen.blit(text_g, rectangle_g)
+    screen.blit(text_r, rectangle_r)
+    screen.blit(text_p, rectangle_p)
+
+    check_quit([thread])
+
+    pygame.display.update()
+    clock.tick(30)
+
 notes = [[] for _ in range(81)]
 print_board(board, fixed, notes, False)
 history = []
 
 # game loop
+filled = False
+correct = False
 while True:
     screen.fill(white)
 
@@ -290,15 +311,10 @@ while True:
         col = ((m_x - padding) * 9) // (width - padding * 2)
         hover = row * 9 + col
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
-        elif event.type == pygame.KEYDOWN:
-            mods = pygame.key.get_mods()
-            if event.key == pygame.K_ESCAPE:
-                pygame.quit()
-                sys.exit()
+    check_quit()
+
+    for event in pygame.event.get(exclude=pygame.QUIT):
+        if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_z and event.mod & pygame.KMOD_CTRL:
                 if history:
                     popped = history.pop()
@@ -357,14 +373,7 @@ while True:
     rectangle = text.get_rect(center = (width // 2, padding // 2))
     screen.blit(text, rectangle)
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                pygame.quit()
-                sys.exit()
+    check_quit()
 
     pygame.display.update()
     clock.tick(30)
