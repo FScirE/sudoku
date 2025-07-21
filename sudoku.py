@@ -313,9 +313,9 @@ while True:
         col = ((m_x - padding) * 9) // (width - padding * 2)
         hover = row * 9 + col
 
-    check_quit()
-
     for event in pygame.event.get(exclude=pygame.QUIT):
+        # add event back in queue for future event get
+        pygame.event.post(event)
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_z and event.mod & pygame.KMOD_CTRL:
                 if history:
@@ -357,6 +357,8 @@ while True:
                     history.append((board_old, notes_old))
 
     print_board(board, fixed, notes, hover=hover)
+
+    check_quit()
 
     pygame.display.update()
     clock.tick(60)
