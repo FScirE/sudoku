@@ -105,7 +105,6 @@ def remove_board_numbers(board, fixed, end = 0, multithread = True):
             else:
                 # finish removing value
                 fixed[remove] = False
-    print("\r              ")
 
 def thread_work(board, remaining, options):
     # get random index
@@ -260,6 +259,7 @@ def check_quit(threads = None):
 print("Generating completed board...")
 board, fixed = generate_completed_board()
 
+print("Removing numbers...")
 thread = threading.Thread(target=remove_board_numbers, args=(board, fixed,))
 thread.start()
 while thread.is_alive():
@@ -268,6 +268,7 @@ while thread.is_alive():
     text_g = font.render("Solved sudoku generated", True, black)
     text_r = font.render("Removing numbers...", True, black)
     atomic_lock.acquire()
+    print(f"Remaining: {atomic_counter} ", end="\r")
     text_p = font.render(f"Remaining: {atomic_counter}", True, black)
     atomic_lock.release()
     rectangle_g = text_g.get_rect(center = (width // 2, height // 2 - (font_size + 4)))
@@ -281,6 +282,7 @@ while thread.is_alive():
 
     pygame.display.update()
     clock.tick(30)
+print("\r             ")
 
 notes = [[] for _ in range(81)]
 print_board(board, fixed, notes, False)
