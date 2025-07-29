@@ -93,9 +93,9 @@ clock = pygame.time.Clock()
 
 padding = 100
 note_padding = 4
-font_size = 32
-font = pygame.font.SysFont("arial", font_size)
-small_font = pygame.font.SysFont("arial", font_size // 2)
+font_size = 36
+font = pygame.font.Font("arial/arial.ttf", font_size)
+small_font = pygame.font.Font("arial/arial.ttf", font_size // 2)
 
 transparent_white = (255, 255, 255, 128)
 white = (255, 255, 255)
@@ -162,9 +162,9 @@ while True:
         print(f"Remaining: {sudoku.atomic_counter} ", end="\r")
         text_p = font.render(f"Remaining: {sudoku.atomic_counter}", True, black)
         sudoku.atomic_lock.release()
-        rectangle_g = text_g.get_rect(center = (width // 2, height // 2 - (font_size + 4)))
+        rectangle_g = text_g.get_rect(center = (width // 2, height // 2 - (font_size + 8)))
         rectangle_r = text_r.get_rect(center = (width // 2, height // 2))
-        rectangle_p = text_p.get_rect(center = (width // 2, height // 2 + (font_size + 4)))
+        rectangle_p = text_p.get_rect(center = (width // 2, height // 2 + (font_size + 8)))
         screen.blit(text_g, rectangle_g)
         screen.blit(text_r, rectangle_r)
         screen.blit(text_p, rectangle_p)
@@ -198,9 +198,9 @@ while True:
             col = ((m_x - padding) * 9) // (width - padding * 2)
             hover = row * 9 + col
 
+        events = []
         for event in pygame.event.get(exclude=pygame.QUIT):
-            # add event back in queue for future event get
-            pygame.event.post(event)
+            events.append(event)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_TAB:
                     current_color = (current_color + 1) % len(color_table)
@@ -250,6 +250,9 @@ while True:
                         history.pop()
                     else:
                         history.append((board_old, notes_old, colors_old))
+        # add events back in queue for future event get
+        for event in events:
+            pygame.event.post(event)
 
         graphical_print(sudoku, notes, colors, hover)
 
