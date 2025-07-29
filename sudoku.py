@@ -142,20 +142,29 @@ class Sudoku:
         return str_r if len(str_r) <= len(str_c) else str_c    
 
     def from_string(self, string):
-        self.board = [0] * 81
-        self.fixed = [False] * 81
+        board = [0] * 81
+        fixed = [False] * 81
         direction = string[0]
+        # not valid direction
+        if direction not in ["r", "c"]:
+            return False
         i = 1
         counter = 0
         while i < len(string):
+            # too many cells
+            if counter >= 81:
+                return False
+            # invalid symbol
+            if not string[i].isnumeric():
+                return False
             if string[i] != "0":
                 if direction == "r":
                     # row direction
-                    self.board[counter] = int(string[i])
+                    board[counter] = int(string[i])
                 else:
                     # column direction
-                    self.board[(counter * 9 + counter // 9) % 81] = int(string[i])
-                self.fixed[counter] = True
+                    board[(counter * 9 + counter // 9) % 81] = int(string[i])
+                fixed[counter] = True
             elif i < len(string) - 1 and string[i + 1] == "x":
                 if string[i + 2] not in ["1", "2"]:
                     counter += int(string[i:i+3], base=0)
@@ -167,6 +176,16 @@ class Sudoku:
                 continue
             i += 1
             counter += 1
+        # incorrect number of cells
+        if counter != 81:
+            return False
+        # invalid board
+        if not valid_board(board) or len(solve_board(board)) != 1:
+            return False
+        # set board if valid
+        self.board = board
+        self.fixed = fixed
+        return True
 
 #sudoku functions -------------------------
 
