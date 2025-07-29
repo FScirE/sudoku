@@ -11,7 +11,6 @@ class Sudoku:
 
         self.board = [0] * 81
         self.fixed = [True] * 81
-        self.notes = [[] for _ in range(81)]
 
     def generate_completed_board(self):
         # generate a solved sudoku
@@ -56,7 +55,7 @@ class Sudoku:
                 options = []
                 # start looking for multiple values to remove simultaneously
                 num_remaining = len(remaining)
-                if num_remaining > 36:
+                if num_remaining > 32:
                     num_threads = 1
                 elif num_remaining > 16:
                     num_threads = 16
@@ -95,6 +94,79 @@ class Sudoku:
 
     def print(self):
         return print_board(self.board)
+    
+    def to_string(self):    
+        # row based string
+        str_r = "r"
+        zero_r = 0
+        for r in range(9):
+            for c in range(9):
+                index = r * 9 + c
+                if self.fixed[index]:
+                    value_r = self.board[index]
+                else:
+                    value_r = 0
+                if value_r == 0:
+                    zero_r += 1
+                    if c < 8 or r < 8:
+                        continue
+                if zero_r > 2:
+                    str_r += f"{hex(zero_r)}"
+                else:
+                    str_r += "0" * zero_r
+                if value_r != 0:
+                    zero_r = 0
+                    str_r += str(value_r)
+        # column based string
+        str_c = "c"
+        zero_c = 0
+        for c in range(9):
+            for r in range(9):
+                index = r * 9 + c
+                if self.fixed[index]:
+                    value_c = self.board[index]
+                else:
+                    value_c = 0
+                if value_c == 0:
+                    zero_c += 1
+                    if c < 8 or r < 8:
+                        continue
+                if zero_c > 2:
+                    str_c += f"{hex(zero_c)}"
+                else:
+                    str_c += "0" * zero_c
+                if value_c != 0:
+                    zero_c = 0
+                    str_c += str(value_c)
+        # return shortest option
+        return str_r if len(str_r) <= len(str_c) else str_c    
+
+    def from_string(self, string):
+        self.board = [0] * 81
+        self.fixed = [False] * 81
+        direction = string[0]
+        i = 1
+        counter = 0
+        while i < len(string):
+            if string[i] != "0":
+                if direction == "r":
+                    # row direction
+                    self.board[counter] = int(string[i])
+                else:
+                    # column direction
+                    self.board[(counter * 9 + counter // 9) % 81] = int(string[i])
+                self.fixed[counter] = True
+            elif i < len(string) - 1 and string[i + 1] == "x":
+                if string[i + 2] not in ["1", "2"]:
+                    counter += int(string[i:i+3], base=0)
+                    i += 3
+                else:
+                    # >=16 zeros in a row
+                    counter += int(string[i:i+4], base=0)
+                    i += 4
+                continue
+            i += 1
+            counter += 1
 
 #sudoku functions -------------------------
 

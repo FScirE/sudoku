@@ -27,7 +27,7 @@ def check_quit(threads = None, quit_signal = None):
             pygame.quit()
             sys.exit()
 
-def graphical_print(sudoku, colors, hover = None):
+def graphical_print(sudoku, notes, colors, hover = None):
     # draw cells
     for i in range(81):
         if colors[i] is not None:
@@ -47,7 +47,7 @@ def graphical_print(sudoku, colors, hover = None):
             marking_color = color_table[current_color][0]
             pygame.draw.rect(screen, marking_color, rect)
         # draw notes
-        cell_notes = sudoku.notes[i]
+        cell_notes = notes[i]
         for note in cell_notes:
             note_col = (note - 1) % 3
             note_row = (note - 1) // 3
@@ -142,6 +142,7 @@ while True:
 
     # sudoku setup
     sudoku = Sudoku()
+    notes = [[] for _ in range(81)]
     colors = [None] * 81
     current_color = 0
 
@@ -207,16 +208,16 @@ while True:
                     if history:
                         popped = history.pop()
                         sudoku.board = popped[0]
-                        sudoku.notes = popped[1]
+                        notes = popped[1]
                         colors = popped[2]
                 elif hover is not None and not sudoku.fixed[hover]:
                     board_old = sudoku.board[:]
-                    notes_old = copy.deepcopy(sudoku.notes)
+                    notes_old = copy.deepcopy(notes)
                     colors_old = colors[:]
                     # erasing
                     if event.key in [pygame.K_BACKSPACE, pygame.K_SPACE, pygame.K_0, pygame.K_KP0]:
                         sudoku.board[hover] = 0
-                        sudoku.notes[hover] = []
+                        notes[hover] = []
                         colors[hover] = None
                     # setting number
                     elif pygame.K_0 <= event.key <= pygame.K_9 or pygame.K_KP0 <= event.key <= pygame.K_KP9:
@@ -228,31 +229,31 @@ while True:
                             if sudoku.board[hover]:
                                 continue
                             # add note
-                            if number not in sudoku.notes[hover]:
-                                sudoku.notes[hover].append(number)
+                            if number not in notes[hover]:
+                                notes[hover].append(number)
                                 colors[hover] = current_color
                             # remove note
                             else:
-                                sudoku.notes[hover].remove(number)
-                                if not sudoku.notes[hover]:
+                                notes[hover].remove(number)
+                                if not notes[hover]:
                                     colors[hover] = None
                         elif sudoku.board[hover] != number:
                             sudoku.board[hover] = number
-                            sudoku.notes[hover] = []
+                            notes[hover] = []
                             colors[hover] = current_color
                     else:
                         continue
                     # add to history
-                    if sudoku.board == board_old and sudoku.notes == notes_old and colors == colors_old:
+                    if sudoku.board == board_old and notes == notes_old and colors == colors_old:
                         pass
-                    elif history and sudoku.board == history[-1][0] and sudoku.notes == history[-1][1] and colors == history[-1][2]:
+                    elif history and sudoku.board == history[-1][0] and notes == history[-1][1] and colors == history[-1][2]:
                         history.pop()
                     else:
                         history.append((board_old, notes_old, colors_old))
 
-        graphical_print(sudoku, colors, hover)
+        graphical_print(sudoku, notes, colors, hover)
 
-        text_u = small_font.render(f"Color: {color_names[current_color]}", True, black)
+        text_u = small_font.render(f"Color: {color_names[current_color]}", True, color_table[current_color][2])
         rectangle_u = text_u.get_rect(center = (width // 2, height - padding // 2))
         screen.blit(text_u, rectangle_u)
 
