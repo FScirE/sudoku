@@ -180,7 +180,7 @@ class Sudoku:
         if counter != 81:
             return False
         # invalid board
-        if not valid_board(board) or len(solve_board(board)) != 1:
+        if not valid_board(board) or len(solve_board(board[:])) != 1:
             return False
         # set board if valid
         self.board = board
@@ -201,7 +201,7 @@ def solve_board(board, limit = 2, solutions = None):
     except:
         return []
     # try all possible numbers
-    for val in get_available(board, index):
+    for val in get_available_smart(board, index):
         board[index] = val
         solutions = solve_board(board[:], limit, solutions)
         if len(solutions) >= limit:
@@ -223,6 +223,7 @@ def thread_work(board, remaining, options, mutex):
         options.append(index)
         mutex.release()
 
+# old available function
 def get_available(board, index):
     available = []
     for i in range(9):
@@ -230,6 +231,80 @@ def get_available(board, index):
         if not conflicts(board, index, val):
             available.append(val)
     return available
+# newer smarted available function
+def get_available_smart(board, index):
+    available = []
+    if board[index]:
+        return [board[index]]
+    for i in range(9):
+        val = i + 1
+        conflict = conflicts(board, index, val)
+        if conflict:
+            continue
+        else:
+            row = index // 9
+            col = index % 9
+            other_r = False
+            other_c = False
+            for r in range(9):
+                index_r = row * 9 + r
+                index_c = r * 9 + col
+                if (not board[index_r] and
+                    index_r != index and 
+                    not other_r and 
+                    not conflicts(board, index_r, val)):
+                    other_r = True
+                if (not board[index_c] and
+                    index_c != index and 
+                    not other_c and 
+                    not conflicts(board, index_c, val)):
+                    other_c = True
+            if not other_r:
+                return [val]
+            if not other_c:
+                return [val]
+            available.append(val)
+    return available
+# new available function for fine printing
+def get_available_analysis(board, index):
+    available = []
+    messages = []
+    if board[index]:
+        return [board[index]], [f"'{board[index]}' is this cell's assigned value"]
+    for i in range(9):
+        val = i + 1
+        conflict = conflicts(board, index, val)
+        if conflict == 1:
+            messages.append(f"'{val}' is already present in row")
+        elif conflict == 2:
+            messages.append(f"'{val}' is already present in column")
+        elif conflict == 3:
+            messages.append(f"'{val}' is already present in box")
+        else:
+            row = index // 9
+            col = index % 9
+            other_r = False
+            other_c = False
+            for r in range(9):
+                index_r = row * 9 + r
+                index_c = r * 9 + col
+                if (not board[index_r] and
+                    index_r != index and 
+                    not other_r and 
+                    not conflicts(board, index_r, val)):
+                    other_r = True
+                if (not board[index_c] and
+                    index_c != index and 
+                    not other_c and 
+                    not conflicts(board, index_c, val)):
+                    other_c = True
+            if not other_r:
+                return [val], [f"For this row, '{val}' must be in this cell"]
+            if not other_c:
+                return [val], [f"For this column, '{val}' must be in this cell"]
+            available.append(val)
+    messages.sort(key=lambda k: k.split(" ")[-1])
+    return available, messages
 
 def valid_board(board):
     for i in range(81):
@@ -248,12 +323,12 @@ def conflicts(board, index, value):
         idx_col = col + 9 * j
         idx_block = ((row // 3) * 3 + j // 3) * 9 + (col // 3) * 3 + j % 3
         if idx_row != index and board[idx_row] == value:
-            return True
+            return 1
         elif idx_col != index and board[idx_col] == value:
-            return True
+            return 2
         elif idx_block != index and board[idx_block] == value:
-            return True
-    return False
+            return 3
+    return 0
 
 def full_board(board):
     return all(map(lambda c: c != 0, board))

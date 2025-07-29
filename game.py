@@ -267,7 +267,7 @@ while True:
     while win_screen_loop:
         screen.fill(white)
 
-        graphical_print(sudoku)
+        graphical_print(sudoku, notes, colors)
 
         layer = pygame.surface.Surface((width, height), pygame.SRCALPHA)
         layer.fill(transparent_white)
