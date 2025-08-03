@@ -27,20 +27,20 @@ def check_quit(threads = None, quit_signal = None):
             pygame.quit()
             sys.exit()
 
-def graphical_print(sudoku, notes, colors, hover = None):
+def graphical_print(sudoku, notes, colors, current_color = 0, selected = None):
     # draw cells
     for i in range(81):
         if colors[i] is not None:
             cell_color = color_table[colors[i]]
         else:
             cell_color = None
-        cell_w = (width - padding * 2) / 9
-        cell_h = (height - padding * 2) / 9
-        # draw hover marking
-        if hover is not None and i == hover:
+        cell_w = (width - padding["left"] - padding["right"]) / 9
+        cell_h = (height - padding["top"] - padding["bottom"]) / 9
+        # draw selected marking
+        if selected is not None and i == selected:
             rect = pygame.rect.Rect(
-                (i % 9) * cell_w + padding,
-                (i // 9) * cell_h + padding,
+                (i % 9) * cell_w + padding["left"],
+                (i // 9) * cell_h + padding["top"],
                 cell_w,
                 cell_h
             )
@@ -53,8 +53,8 @@ def graphical_print(sudoku, notes, colors, hover = None):
             note_row = (note - 1) // 3
             text = small_font.render(f"{note}", True, cell_color[1])
             rectangle = text.get_rect(center = (
-                (i % 9 + 0.5) * cell_w + padding + (note_col - 1) * (cell_w - note_padding * 2) // 3,
-                (i // 9 + 0.5) * cell_h + padding + (1 - note_row) * (cell_h - note_padding * 2) // 3
+                (i % 9 + 0.5) * cell_w + padding["left"] + (note_col - 1) * (cell_w - note_padding * 2) // 3,
+                (i // 9 + 0.5) * cell_h + padding["top"] + (1 - note_row) * (cell_h - note_padding * 2) // 3
             ))
             screen.blit(text, rectangle)
         # draw cell values
@@ -64,8 +64,8 @@ def graphical_print(sudoku, notes, colors, hover = None):
         color = black if sudoku.fixed[i] else cell_color[2]
         text = font.render(f"{value}", True, color)
         rectangle = text.get_rect(center = (
-            (i % 9 + 0.5) * cell_w + padding,
-            (i // 9 + 0.5) * cell_h + padding
+            (i % 9 + 0.5) * cell_w + padding["left"],
+            (i // 9 + 0.5) * cell_h + padding["top"]
         ))
         screen.blit(text, rectangle)
     # draw grid
@@ -75,11 +75,11 @@ def graphical_print(sudoku, notes, colors, hover = None):
         else:
             line_width = 1
         pygame.draw.line(screen, black,
-                        (i * (width - padding * 2) / 9 + padding, padding),
-                        (i * (width - padding * 2) / 9 + padding, height - padding), line_width)
+                        (i * (width - padding["left"] - padding["right"]) / 9 + padding["left"], padding["top"]),
+                        (i * (width - padding["left"] - padding["right"]) / 9 + padding["left"], height - padding["bottom"]), line_width)
         pygame.draw.line(screen, black,
-                        (padding, i * (height - padding * 2) / 9 + padding),
-                        (width - padding, i * (height - padding * 2) / 9 + padding), line_width)
+                        (padding["left"], i * (height - padding["top"] - padding["bottom"]) / 9 + padding["top"]),
+                        (width - padding["right"], i * (height - padding["top"] - padding["bottom"]) / 9 + padding["top"]), line_width)
 
 # setup ------------------------------
 
@@ -91,7 +91,12 @@ height = 800
 screen = pygame.display.set_mode((width, height))
 clock = pygame.time.Clock()
 
-padding = 100
+padding = {
+    "top": 100, 
+    "bottom": 100, 
+    "left": 100, 
+    "right": 100
+}
 note_padding = 4
 font_size = 36
 font = pygame.font.Font("arial/arial.ttf", font_size)
@@ -110,8 +115,8 @@ medium_blue = tuple_sub(light_blue, blue_delta)
 dark_blue = tuple_sub(medium_blue, blue_delta)
 
 # green
-green_delta = (75, 35, 115)
-light_green = (245, 255, 230)
+green_delta = (90, 35, 115)
+light_green = (225, 255, 230)
 medium_green = tuple_sub(light_green, green_delta)
 dark_green = tuple_sub(medium_green, green_delta)
 
@@ -131,7 +136,6 @@ color_names = {
     1: "Green",
     2: "Red"
 }
-current_color = 0
 
 screen.fill(white)
 
@@ -144,7 +148,8 @@ while True:
     sudoku = Sudoku()
     notes = [[] for _ in range(81)]
     colors = [None] * 81
-    current_color = 0
+    current_color = 1
+    selected = None
 
     print("Generating completed board...")
     sudoku.generate_completed_board()
@@ -188,19 +193,10 @@ while True:
             else:
                 pass
 
-        mouse = pygame.mouse.get_pos()
-        m_x = mouse[0]
-        m_y = mouse[1]
-
-        hover = None
-        if m_x > padding and m_x < width - padding and m_y > padding and m_y < height - padding:
-            row = ((m_y - padding) * 9) // (height - padding * 2)
-            col = ((m_x - padding) * 9) // (width - padding * 2)
-            hover = row * 9 + col
-
         events = []
-        for event in pygame.event.get(exclude=pygame.QUIT):
+        for event in pygame.event.get():
             events.append(event)
+            # keyboard events
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_TAB:
                     current_color = (current_color + 1) % len(color_table)
@@ -210,15 +206,15 @@ while True:
                         sudoku.board = popped[0]
                         notes = popped[1]
                         colors = popped[2]
-                elif hover is not None and not sudoku.fixed[hover]:
+                elif selected is not None and not sudoku.fixed[selected]:
                     board_old = sudoku.board[:]
                     notes_old = copy.deepcopy(notes)
                     colors_old = colors[:]
                     # erasing
                     if event.key in [pygame.K_BACKSPACE, pygame.K_SPACE, pygame.K_0, pygame.K_KP0]:
-                        sudoku.board[hover] = 0
-                        notes[hover] = []
-                        colors[hover] = None
+                        sudoku.board[selected] = 0
+                        notes[selected] = []
+                        colors[selected] = None
                     # setting number
                     elif pygame.K_0 <= event.key <= pygame.K_9 or pygame.K_KP0 <= event.key <= pygame.K_KP9:
                         if pygame.K_0 <= event.key <= pygame.K_9:
@@ -226,21 +222,21 @@ while True:
                         else:
                             number = event.key - pygame.K_KP0
                         if event.mod & pygame.KMOD_SHIFT:
-                            if sudoku.board[hover]:
+                            if sudoku.board[selected]:
                                 continue
                             # add note
-                            if number not in notes[hover]:
-                                notes[hover].append(number)
-                                colors[hover] = current_color
+                            if number not in notes[selected]:
+                                notes[selected].append(number)
+                                colors[selected] = current_color
                             # remove note
                             else:
-                                notes[hover].remove(number)
-                                if not notes[hover]:
-                                    colors[hover] = None
-                        elif sudoku.board[hover] != number:
-                            sudoku.board[hover] = number
-                            notes[hover] = []
-                            colors[hover] = current_color
+                                notes[selected].remove(number)
+                                if not notes[selected]:
+                                    colors[selected] = None
+                        elif sudoku.board[selected] != number:
+                            sudoku.board[selected] = number
+                            notes[selected] = []
+                            colors[selected] = current_color
                     else:
                         continue
                     # add to history
@@ -250,14 +246,28 @@ while True:
                         history.pop()
                     else:
                         history.append((board_old, notes_old, colors_old))
+            # mouse events
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    # left click
+                    m_x = event.pos[0]
+                    m_y = event.pos[1]
+                    if m_x > padding["left"] and m_x < width - padding["right"] and m_y > padding["top"] and m_y < height - padding["bottom"]:
+                        row = ((m_y - padding["top"]) * 9) // (height - padding["top"] - padding["bottom"])
+                        col = ((m_x - padding["left"]) * 9) // (width - padding["left"] - padding["right"])
+                        selected = row * 9 + col
+                    else:
+                        selected = None
+                elif event.button == 3:
+                    selected = None
         # add events back in queue for future event get
         for event in events:
             pygame.event.post(event)
 
-        graphical_print(sudoku, notes, colors, hover)
+        graphical_print(sudoku, notes, colors, current_color, selected)
 
         text_u = small_font.render(f"Color: {color_names[current_color]}", True, color_table[current_color][2])
-        rectangle_u = text_u.get_rect(center = (width // 2, height - padding // 2))
+        rectangle_u = text_u.get_rect(center = (width // 2, height - padding["bottom"] // 2))
         screen.blit(text_u, rectangle_u)
 
         check_quit()
@@ -278,8 +288,8 @@ while True:
 
         text = font.render("Congratulations!", True, black)
         text_u = small_font.render("Press ENTER to play again", True, black)
-        rectangle = text.get_rect(center = (width // 2, padding // 2))
-        rectangle_u = text_u.get_rect(center = (width // 2, height - padding // 2))
+        rectangle = text.get_rect(center = (width // 2, padding["top"] // 2))
+        rectangle_u = text_u.get_rect(center = (width // 2, height - padding["bottom"] // 2))
         screen.blit(text, rectangle)
         screen.blit(text_u, rectangle_u)
 
