@@ -81,6 +81,17 @@ def graphical_print(sudoku, notes, colors, current_light_color = None, selected 
                         (padding["left"], i * (height - padding["top"] - padding["bottom"]) / 9 + padding["top"]),
                         (width - padding["right"], i * (height - padding["top"] - padding["bottom"]) / 9 + padding["top"]), line_width)
         
+def draw_buttons(buttons):
+    hovered = False
+    for button in buttons:
+        if not hovered and button.hovered(pygame.mouse.get_pos()):
+            hovered = True
+        button.draw(screen, current_color_table)
+    if hovered:
+        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+    else:
+        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+        
 # game functions ---------------------------
 
 def color_change(current_color, current_color_table):
@@ -236,6 +247,8 @@ while True:
     selected = None
     difficulty = 0 # between 0-81 inclusive, higher -> easier
 
+    pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_WAIT)
+
     print("Generating completed board...")
     sudoku.generate_completed_board()
 
@@ -268,6 +281,8 @@ while True:
 
     sudoku.print()
     history = []
+
+    pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
 
     # button setup pre game
     buttons = []
@@ -424,8 +439,7 @@ while True:
 
         graphical_print(sudoku, notes, colors, current_color_table["light"], selected)
 
-        for button in buttons:
-            button.draw(screen, current_color_table)
+        draw_buttons(buttons)
 
         check_quit(events)
 
@@ -483,8 +497,7 @@ while True:
                             win_screen_loop = False
                             break
 
-        for button in buttons:
-            button.draw(screen, current_color_table)
+        draw_buttons(buttons)
 
         check_quit(events)
 
