@@ -2,8 +2,10 @@ import pygame
 import threading
 import copy
 import sys
+import pyperclip
 from sudoku import Sudoku
 from button import Button
+from textbox import Textbox
 
 # helper functions -------------------------
 
@@ -175,7 +177,7 @@ def set_value(sudoku, notes, colors, selected, note_mode, number, history):
 # pygame setup
 pygame.init()
 pygame.display.set_caption("Sudoku")
-width = 800
+width = 1000
 height = 800
 screen = pygame.display.set_mode((width, height))
 clock = pygame.time.Clock()
@@ -183,33 +185,35 @@ clock = pygame.time.Clock()
 padding = {
     "top": 100, 
     "bottom": 100, 
-    "left": 100, 
-    "right": 100
+    "left": 200, 
+    "right": 200
 }
 note_padding = 4
 font_size = 36
 font = pygame.font.Font("arial/arial.ttf", font_size)
 small_font = pygame.font.Font("arial/arial.ttf", font_size // 2)
+narrow_font = pygame.font.Font("arial/arialn.ttf", font_size // 2)
+large_font = pygame.font.Font("arial/arialbd.ttf", font_size * 2)
 
 transparent_white = (255, 255, 255, 128)
 white = (255, 255, 255)
 black = (0, 0, 0)
 
 # blue
-blue_delta = (115, 75, 35)
-light_blue = (230, 245, 255)
+blue_delta = (110, 70, 35)
+light_blue = (225, 240, 255)
 medium_blue = tuple_sub(light_blue, blue_delta)
 dark_blue = tuple_sub(medium_blue, blue_delta)
 
 # green
 green_delta = (95, 50, 115)
-light_green = (230, 255, 235)
+light_green = (225, 255, 230)
 medium_green = tuple_sub(light_green, green_delta)
 dark_green = tuple_sub(medium_green, green_delta)
 
 # red
 red_delta = (35, 110, 75)
-light_red = (255, 235, 240)
+light_red = (250, 235, 235)
 medium_red = tuple_sub(light_red, red_delta)
 dark_red = tuple_sub(medium_red, red_delta)
 
@@ -246,50 +250,141 @@ while True:
     }
     selected = None
     difficulty = 0 # between 0-81 inclusive, higher -> easier
+    code = ""
 
-    pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_WAIT)
+    # button and textbox setup for menu
+    buttons = []
+    # generate sudoku button
+    button_width = 320
+    button_height = 80
+    buttons.append(
+        Button(
+            [width / 2 - button_width / 2, height * 3 / 7 - button_height / 2],
+            [button_width, button_height],
+            "dark",
+            "white",
+            "Generate Sudoku",
+            font,
+            "generate"
+        )
+    )
+    # code input
+    input_width = 680
+    input_height = 50
+    input = Textbox(
+        [width / 2 - input_width / 2, height * 3 / 5 - input_height / 2],
+        [input_width, input_height],
+        "medium",
+        "black",
+        narrow_font,
+        "code_input"
+    )
+    # from code button
+    button_width = 300
+    button_height = 80
+    buttons.append(
+        Button(
+            [width / 2 - button_width / 2, height * 5 / 7 - button_height / 2],
+            [button_width, button_height],
+            "dark",
+            "white",
+            "Import Sudoku",
+            font,
+            "code_finished"
+        )
+    )
 
-    print("Generating completed board...")
-    sudoku.generate_completed_board()
-
-    print("Removing numbers...")
-    quit_signal = threading.Event()
-    thread = threading.Thread(target=sudoku.remove_board_numbers, args=(difficulty,), kwargs={"quit_signal": quit_signal,})
-    thread.start()
-    while thread.is_alive():
+    # menu screen
+    generate = False
+    pre_game_loop = True
+    while pre_game_loop:
         screen.fill(white)
 
-        text_g = font.render("Solved sudoku generated", True, black)
-        text_r = font.render("Removing numbers...", True, black)
-        sudoku.atomic_lock.acquire()
-        print(f"Remaining: {sudoku.atomic_counter} ", end="\r")
-        text_p = font.render(f"Remaining: {sudoku.atomic_counter}", True, black)
-        sudoku.atomic_lock.release()
-        rectangle_g = text_g.get_rect(center = (width / 2, height / 2 - (font_size + 8)))
-        rectangle_r = text_r.get_rect(center = (width / 2, height / 2))
-        rectangle_p = text_p.get_rect(center = (width / 2, height / 2 + (font_size + 8)))
-        screen.blit(text_g, rectangle_g)
-        screen.blit(text_r, rectangle_r)
-        screen.blit(text_p, rectangle_p)
+        text = large_font.render("SUDOKU", True, black)
+        rectangle = text.get_rect(center = (width / 2, height / 4))
+        screen.blit(text, rectangle)
 
         events = pygame.event.get()
-        check_quit(events, [thread], quit_signal)
+        for event in events:
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1: 
+                for button in buttons:
+                    if button.hovered(event.pos):
+                        if button.id == "generate":
+                            pre_game_loop = False
+                            generate = True
+                        elif button.id == "code_finished":
+                            pre_game_loop = False
+                if input.hovered(event.pos):
+                    input.active = True
+                else:
+                    input.active = False
+
+        if input.handle_input(events):
+            pre_game_loop = False
+
+        # check if valid code
+        if not pre_game_loop and not generate:
+            if not sudoku.from_string(input.content):
+                pre_game_loop = True
+                input.content = ""
+
+        draw_buttons(buttons)
+        input.draw(screen, current_color_table)
+
+        check_quit(events)
 
         pygame.display.update()
         clock.tick(30)
-    print("\r             ")
 
+    if generate:
+        # generate random sudoku
+        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_WAIT)
+
+        print("Generating completed board...")
+        sudoku.generate_completed_board()
+
+        print("Removing numbers...")
+        quit_signal = threading.Event()
+        thread = threading.Thread(target=sudoku.remove_board_numbers, args=(difficulty,), kwargs={"quit_signal": quit_signal,})
+        thread.start()
+        while thread.is_alive():
+            screen.fill(white)
+
+            text_g = font.render("Solved sudoku generated", True, black)
+            text_r = font.render("Removing numbers...", True, black)
+            sudoku.atomic_lock.acquire()
+            print(f"Remaining: {sudoku.atomic_counter} ", end="\r")
+            text_p = font.render(f"Remaining: {sudoku.atomic_counter}", True, black)
+            sudoku.atomic_lock.release()
+            rectangle_g = text_g.get_rect(center = (width / 2, height / 2 - (font_size + 8)))
+            rectangle_r = text_r.get_rect(center = (width / 2, height / 2))
+            rectangle_p = text_p.get_rect(center = (width / 2, height / 2 + (font_size + 8)))
+            screen.blit(text_g, rectangle_g)
+            screen.blit(text_r, rectangle_r)
+            screen.blit(text_p, rectangle_p)
+
+            events = pygame.event.get()
+            check_quit(events, [thread], quit_signal)
+
+            pygame.display.update()
+            clock.tick(30)
+        print("\r             ")
+
+        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+    else:
+        print(f"Generated from code: {input.content}")
+
+    code = sudoku.to_string()
     sudoku.print()
-    history = []
+    print(f"Code: {code}")
+    history = []   
 
-    pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-
-    # button setup pre game
+    # button setup for game
     buttons = []
     # number buttons
-    button_spacing = 6
-    button_width = (width - padding["left"] - padding["right"]) / 9 - (button_spacing * 8 / 9)
-    button_height = button_width
+    button_spacing = 10
+    button_width = (width - padding["left"] - padding["right"]) / 9 - (8 / 9) * button_spacing
+    button_height = button_width 
     for n in range(1, 10):
         pos_x = padding["left"] + (n - 1) * (button_width + button_spacing)
         pos_y = padding["top"] / 2 - button_height / 2
@@ -310,7 +405,7 @@ while True:
     button_height = 50
     buttons.append(
         Button(
-            [width * 4 / 11, height - padding["bottom"] / 2 - button_height / 2],
+            [width * 5 / 14 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2],
             [button_width, button_height],
             "dark",
             "white",
@@ -324,7 +419,7 @@ while True:
     button_height = 50
     buttons.append(
         Button(
-            [padding["left"], height - padding["bottom"] / 2 - button_height / 2],
+            [width / 7 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2],
             [button_width, button_height],
             "dark",
             "white",
@@ -338,7 +433,7 @@ while True:
     button_height = 50
     buttons.append(
         Button(
-            [width * 8 / 13, height - padding["bottom"] / 2 - button_height / 2],
+            [width * 5 / 7 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2],
             [button_width, button_height],
             "dark",
             "white",
@@ -352,13 +447,27 @@ while True:
     button_height = 50
     buttons.append(
         Button(
-            [width - padding["right"] - button_width, height - padding["bottom"] / 2 - button_height / 2],
+            [width * 6 / 7 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2],
             [button_width, button_height],
             "dark",
             "white",
             "Erase",
             small_font,
             "erase",
+        )
+    )
+    # copy button
+    button_width = 70
+    button_height = 50
+    buttons.append(
+        Button(
+            [width * 11 / 20 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2],
+            [button_width, button_height],
+            "dark",
+            "white",
+            "Copy",
+            small_font,
+            "copy",
         )
     )
 
@@ -383,6 +492,8 @@ while True:
                 elif event.key == pygame.K_z and event.mod & pygame.KMOD_CTRL:
                     if history:
                         notes, colors = undo(history, sudoku, notes, colors)
+                elif event.key == pygame.K_c and event.mod & pygame.KMOD_CTRL:
+                    pyperclip.copy(code)
                 elif selected is not None and not sudoku.fixed[selected]:
                     # erasing
                     if event.key in [pygame.K_BACKSPACE, pygame.K_SPACE, pygame.K_0, pygame.K_KP0]:
@@ -422,6 +533,8 @@ while True:
                                 if selected:
                                     erase(sudoku, notes, colors, selected, history)
                                 button_pressed = True
+                            elif button.id == "copy":
+                                pyperclip.copy(code)
                             elif button.id.count("num_"):
                                 if selected:
                                     number = button.value
@@ -455,7 +568,7 @@ while True:
         "dark": dark_blue
     }
     buttons = []
-    button_width = 115
+    button_width = 155
     button_height = 50
     buttons.append(
         Button(
@@ -463,9 +576,9 @@ while True:
             [button_width, button_height],
             "dark",
             "white",
-            "Play Again",
+            "Return To Menu",
             small_font,
-            "replay"
+            "menu"
         )
     )
 
@@ -493,7 +606,7 @@ while True:
             elif event.type == pygame.MOUSEBUTTONDOWN: 
                 if event.button == 1:
                     for button in buttons:
-                        if button.id == "replay" and button.hovered(event.pos):
+                        if button.id == "menu" and button.hovered(event.pos):
                             win_screen_loop = False
                             break
 
