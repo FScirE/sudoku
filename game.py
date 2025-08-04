@@ -329,6 +329,9 @@ while True:
                 input.content = ""
 
         draw_buttons(buttons)
+
+        if pygame.mouse.get_cursor().data[0] == pygame.SYSTEM_CURSOR_ARROW and input.hovered(pygame.mouse.get_pos()):
+            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_IBEAM)
         input.draw(screen, current_color_table)
 
         check_quit(events)
@@ -470,8 +473,23 @@ while True:
             "copy",
         )
     )
+    # back button
+    button_width = 70
+    button_height = 50
+    buttons.append(
+        Button(
+            [0, 0],
+            [button_width, button_height],
+            "medium",
+            "white",
+            "Back",
+            small_font,
+            "back",
+        )
+    )
 
     # game loop
+    return_menu = False
     while True:
         screen.fill(white)
 
@@ -494,6 +512,10 @@ while True:
                         notes, colors = undo(history, sudoku, notes, colors)
                 elif event.key == pygame.K_c and event.mod & pygame.KMOD_CTRL:
                     pyperclip.copy(code)
+                elif event.key == pygame.K_ESCAPE:
+                    # go back to menu (override quit)
+                    return_menu = True
+                    break
                 elif selected is not None and not sudoku.fixed[selected]:
                     # erasing
                     if event.key in [pygame.K_BACKSPACE, pygame.K_SPACE, pygame.K_0, pygame.K_KP0]:
@@ -535,6 +557,9 @@ while True:
                                 button_pressed = True
                             elif button.id == "copy":
                                 pyperclip.copy(code)
+                            elif button.id == "back":
+                                return_menu = True
+                                break
                             elif button.id.count("num_"):
                                 if selected:
                                     number = button.value
@@ -549,6 +574,9 @@ while True:
                         selected = row * 9 + col                       
                 elif event.button == 3:
                     selected = None
+        
+        if return_menu:
+            break
 
         graphical_print(sudoku, notes, colors, current_color_table["light"], selected)
 
@@ -559,6 +587,10 @@ while True:
         pygame.display.update()
         clock.tick(60)
 
+    # skip win screen
+    if return_menu:
+        continue
+
     # button setup post game
     current_color_table = {
         "white": white,
@@ -568,17 +600,32 @@ while True:
         "dark": dark_blue
     }
     buttons = []
+    # return button
     button_width = 155
     button_height = 50
     buttons.append(
         Button(
-            [width / 2 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2],
+            [width * 3 / 7 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2],
             [button_width, button_height],
             "dark",
             "white",
             "Return To Menu",
             small_font,
             "menu"
+        )
+    )
+    # copy button
+    button_width = 70
+    button_height = 50
+    buttons.append(
+        Button(
+            [width * 4 / 7 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2],
+            [button_width, button_height],
+            "dark",
+            "white",
+            "Copy",
+            small_font,
+            "copy",
         )
     )
 
@@ -603,12 +650,17 @@ while True:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
                     win_screen_loop = False
+                elif event.key == pygame.K_c and event.mod & pygame.KMOD_CTRL:
+                    pyperclip.copy(code)
             elif event.type == pygame.MOUSEBUTTONDOWN: 
                 if event.button == 1:
                     for button in buttons:
-                        if button.id == "menu" and button.hovered(event.pos):
-                            win_screen_loop = False
-                            break
+                        if button.hovered(event.pos):
+                            if button.id == "menu":
+                                win_screen_loop = False
+                                break
+                            elif button.id == "copy":
+                                pyperclip.copy(code)
 
         draw_buttons(buttons)
 

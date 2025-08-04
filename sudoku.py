@@ -1,5 +1,6 @@
 import random
 import threading
+import os
 
 #sudoku class ----------------------------
 
@@ -54,11 +55,12 @@ class Sudoku:
                 threads = []
                 options = []
                 # start looking for multiple values to remove simultaneously
+                num_cores = os.cpu_count()
                 num_remaining = len(remaining)
-                if num_remaining > 24:
+                if num_remaining > 32:
                     num_threads = 1
-                elif num_remaining > 8:
-                    num_threads = 8
+                elif num_remaining > num_cores:
+                    num_threads = num_cores
                 else:
                     num_threads = num_remaining
                 for _ in range(num_threads):
@@ -144,6 +146,8 @@ class Sudoku:
     def from_string(self, string):
         board = [0] * 81
         fixed = [False] * 81
+        if not string:
+            return False
         direction = string[0]
         # not valid direction
         if direction not in ["r", "c"]:
