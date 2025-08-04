@@ -20,7 +20,7 @@ def check_quit(events, threads = None, quit_signal = None):
             if threads:
                 screen.fill(white)
                 text = font.render("Closing...", True, black)
-                rectangle = text.get_rect(center = (width // 2, height // 2))
+                rectangle = text.get_rect(center = (width / 2, height / 2))
                 screen.blit(text, rectangle)
                 pygame.display.update()
                 for t in threads:
@@ -95,12 +95,15 @@ def notes_toggle(note_mode, buttons):
     for button in buttons:
         if button.id.count("num_"):
             button.color[0] = "medium" if note_mode else "dark"
+            button.color[1] = "black" if note_mode else "white"
         elif button.id == "notes":
             if note_mode:
                 button.color[0] = "medium"
+                button.color[1] = "black"
                 button.text = "Notes: ON"
             else:
                 button.color[0] = "dark"
+                button.color[1] = "white"
                 button.text = "Notes: OFF"
     return note_mode
 
@@ -166,7 +169,6 @@ height = 800
 screen = pygame.display.set_mode((width, height))
 clock = pygame.time.Clock()
 
-difficulty = 50 # between 0-81 inclusive, higher -> easier
 padding = {
     "top": 100, 
     "bottom": 100, 
@@ -232,6 +234,7 @@ while True:
         "dark": color_table[current_color][2]
     }
     selected = None
+    difficulty = 0 # between 0-81 inclusive, higher -> easier
 
     print("Generating completed board...")
     sudoku.generate_completed_board()
@@ -249,9 +252,9 @@ while True:
         print(f"Remaining: {sudoku.atomic_counter} ", end="\r")
         text_p = font.render(f"Remaining: {sudoku.atomic_counter}", True, black)
         sudoku.atomic_lock.release()
-        rectangle_g = text_g.get_rect(center = (width // 2, height // 2 - (font_size + 8)))
-        rectangle_r = text_r.get_rect(center = (width // 2, height // 2))
-        rectangle_p = text_p.get_rect(center = (width // 2, height // 2 + (font_size + 8)))
+        rectangle_g = text_g.get_rect(center = (width / 2, height / 2 - (font_size + 8)))
+        rectangle_r = text_r.get_rect(center = (width / 2, height / 2))
+        rectangle_p = text_p.get_rect(center = (width / 2, height / 2 + (font_size + 8)))
         screen.blit(text_g, rectangle_g)
         screen.blit(text_r, rectangle_r)
         screen.blit(text_p, rectangle_p)
@@ -279,7 +282,7 @@ while True:
             Button(
                 [pos_x, pos_y], 
                 [button_width, button_height],
-                "medium" if note_mode else "dark",
+                "dark",
                 "white",
                 f"{n}",
                 small_font,
@@ -308,9 +311,9 @@ while True:
         Button(
             [padding["left"], height - padding["bottom"] / 2 - button_height / 2],
             [button_width, button_height],
-            "medium" if note_mode else "dark",
+            "dark",
             "white",
-            f"Notes: {"ON" if note_mode else "OFF"}",
+            "Notes: OFF",
             small_font,
             "notes",
         )
@@ -430,7 +433,27 @@ while True:
         clock.tick(60)
 
     # button setup post game
+    current_color_table = {
+        "white": white,
+        "black": black,
+        "light": light_blue,
+        "medium": medium_blue,
+        "dark": dark_blue
+    }
     buttons = []
+    button_width = 115
+    button_height = 50
+    buttons.append(
+        Button(
+            [width / 2 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2],
+            [button_width, button_height],
+            "dark",
+            "white",
+            "Play Again",
+            small_font,
+            "replay"
+        )
+    )
 
     # win screen
     win_screen_loop = True
@@ -444,18 +467,24 @@ while True:
         screen.blit(layer, (0, 0))
 
         text = font.render("Congratulations!", True, black)
-        text_u = small_font.render("Press ENTER to play again", True, black)
-        rectangle = text.get_rect(center = (width // 2, padding["top"] // 2))
-        rectangle_u = text_u.get_rect(center = (width // 2, height - padding["bottom"] // 2))
+        rectangle = text.get_rect(center = (width / 2, padding["top"] / 2))
         screen.blit(text, rectangle)
-        screen.blit(text_u, rectangle_u)
 
         events = pygame.event.get()
         for event in events:
+            # new game
             if event.type == pygame.KEYDOWN:
-                # new game
                 if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
                     win_screen_loop = False
+            elif event.type == pygame.MOUSEBUTTONDOWN: 
+                if event.button == 1:
+                    for button in buttons:
+                        if button.id == "replay" and button.hovered(event.pos):
+                            win_screen_loop = False
+                            break
+
+        for button in buttons:
+            button.draw(screen, current_color_table)
 
         check_quit(events)
 

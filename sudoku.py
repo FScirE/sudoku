@@ -55,10 +55,10 @@ class Sudoku:
                 options = []
                 # start looking for multiple values to remove simultaneously
                 num_remaining = len(remaining)
-                if num_remaining > 32:
+                if num_remaining > 24:
                     num_threads = 1
-                elif num_remaining > 16:
-                    num_threads = 16
+                elif num_remaining > 8:
+                    num_threads = 8
                 else:
                     num_threads = num_remaining
                 for _ in range(num_threads):
@@ -236,14 +236,14 @@ def get_available_smart(board, index):
     available = []
     if board[index]:
         return [board[index]]
+    row = index // 9
+    col = index % 9
     for i in range(9):
         val = i + 1
         conflict = conflicts(board, index, val)
         if conflict:
             continue
         else:
-            row = index // 9
-            col = index % 9
             other_r = False
             other_c = False
             for r in range(9):
@@ -259,9 +259,7 @@ def get_available_smart(board, index):
                     not other_c and 
                     not conflicts(board, index_c, val)):
                     other_c = True
-            if not other_r:
-                return [val]
-            if not other_c:
+            if not other_r or not other_c:
                 return [val]
             available.append(val)
     return available
@@ -271,6 +269,8 @@ def get_available_analysis(board, index):
     messages = []
     if board[index]:
         return [board[index]], [f"'{board[index]}' is this cell's assigned value"]
+    row = index // 9
+    col = index % 9
     for i in range(9):
         val = i + 1
         conflict = conflicts(board, index, val)
@@ -281,8 +281,6 @@ def get_available_analysis(board, index):
         elif conflict == 3:
             messages.append(f"'{val}' is already present in box")
         else:
-            row = index // 9
-            col = index % 9
             other_r = False
             other_c = False
             for r in range(9):
