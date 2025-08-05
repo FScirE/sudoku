@@ -254,18 +254,49 @@ while True:
 
     # button and textbox setup for menu
     buttons = []
-    # generate sudoku button
-    button_width = 320
-    button_height = 80
+    # easy button
+    button_width = 90
+    button_height = 60
     buttons.append(
         Button(
-            [width / 2 - button_width / 2, height * 3 / 7 - button_height / 2],
+            [width * 5 / 13 - button_width / 2, height * 19 / 40 - button_height / 2],
             [button_width, button_height],
             "dark",
             "white",
-            "Generate Sudoku",
-            font,
-            "generate"
+            "Easy",
+            small_font,
+            "generate",
+            36
+        )
+    )
+    # medium button
+    button_width = 100
+    button_height = 60
+    buttons.append(
+        Button(
+            [width / 2 - button_width / 2, height * 19 / 40 - button_height / 2],
+            [button_width, button_height],
+            "dark",
+            "white",
+            "Medium",
+            small_font,
+            "generate",
+            18
+        )
+    )
+    # hard button
+    button_width = 90
+    button_height = 60
+    buttons.append(
+        Button(
+            [width * 8 / 13 - button_width / 2, height * 19 / 40 - button_height / 2],
+            [button_width, button_height],
+            "dark",
+            "white",
+            "Hard",
+            small_font,
+            "generate",
+            0
         )
     )
     # code input
@@ -280,16 +311,16 @@ while True:
         "code_input"
     )
     # from code button
-    button_width = 300
-    button_height = 80
+    button_width = 160
+    button_height = 60
     buttons.append(
         Button(
-            [width / 2 - button_width / 2, height * 5 / 7 - button_height / 2],
+            [width / 2 - button_width / 2, height * 7 / 10 - button_height / 2],
             [button_width, button_height],
             "dark",
             "white",
             "Import Sudoku",
-            font,
+            small_font,
             "code_finished"
         )
     )
@@ -301,8 +332,11 @@ while True:
         screen.fill(white)
 
         text = large_font.render("SUDOKU", True, black)
+        text_u = font.render("Generate Sudoku", True, black)
         rectangle = text.get_rect(center = (width / 2, height / 4))
+        rectangle_u = text_u.get_rect(center = (width / 2, height * 2 / 5))
         screen.blit(text, rectangle)
+        screen.blit(text_u, rectangle_u)
 
         events = pygame.event.get()
         for event in events:
@@ -312,6 +346,7 @@ while True:
                         if button.id == "generate":
                             pre_game_loop = False
                             generate = True
+                            difficulty = button.value
                         elif button.id == "code_finished":
                             pre_game_loop = False
                 if input.hovered(event.pos):
@@ -322,7 +357,7 @@ while True:
         if input.handle_input(events):
             pre_game_loop = False
 
-        # check if valid code
+        # check if code gave a valid sudoku
         if not pre_game_loop and not generate:
             if not sudoku.from_string(input.content):
                 pre_game_loop = True

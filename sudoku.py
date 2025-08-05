@@ -45,6 +45,7 @@ class Sudoku:
     def remove_board_numbers(self, end = 0, multithread = True, quit_signal = None):
         # remove numbers randomly until limit for how many numbers to check is reached
         remaining = [i for i in range(81)]
+        random.shuffle(remaining)
         while len(remaining) > end:
             if quit_signal is not None and quit_signal.is_set():
                 return None, None
@@ -165,10 +166,11 @@ class Sudoku:
                 if direction == "r":
                     # row direction
                     board[counter] = int(string[i])
+                    fixed[counter] = True
                 else:
                     # column direction
                     board[(counter * 9 + counter // 9) % 81] = int(string[i])
-                fixed[counter] = True
+                    fixed[(counter * 9 + counter // 9) % 81] = True
             elif i < len(string) - 1 and string[i + 1] == "x":
                 if string[i + 2] not in ["1", "2"]:
                     counter += int(string[i:i+3], base=0)
@@ -190,6 +192,9 @@ class Sudoku:
         self.board = board
         self.fixed = fixed
         return True
+    
+    def solve(self):
+        self.board = solve_board(self.board[:], 1)[0]
 
 #sudoku functions -------------------------
 
@@ -199,11 +204,21 @@ def solve_board(board, limit = 2, solutions = None):
     if full_board(board):
         solutions.append(board)
         return solutions
-    # get first empty cell
-    try:
-        index = board.index(0)
-    except:
-        return []
+    # get empty cell with least amount of options
+    index = -1
+    min_amt = 10
+    for i in range(81):
+        if board[i] != 0:
+            continue
+        amt_options = len(get_available(board, i))
+        if amt_options == 0:
+            return solutions
+        if amt_options < min_amt:
+            min_amt = amt_options
+            index = i
+            if amt_options == 1:
+                break
+    # index = board.index(0)
     # try all possible numbers
     for val in get_available_smart(board, index):
         board[index] = val
@@ -213,10 +228,9 @@ def solve_board(board, limit = 2, solutions = None):
     return solutions
 
 def thread_work(board, remaining, options, mutex):
-    # get random index
+    # get index
     mutex.acquire()
-    index = random.choice(remaining)
-    remaining.remove(index)
+    index = remaining.pop()
     mutex.release()
     # remove cell value
     board[index] = 0
