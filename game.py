@@ -128,10 +128,11 @@ def undo(history, sudoku, notes, colors):
     return notes, colors
 
 def copy_board_info(sudoku, notes, colors):
-    board_old = sudoku.board[:]
-    notes_old = copy.deepcopy(notes)
-    colors_old = colors[:]
-    return board_old, notes_old, colors_old
+    board_copy = sudoku.board[:]
+    fixed_copy = sudoku.fixed[:]
+    notes_copy = copy.deepcopy(notes)
+    colors_copy = colors[:]
+    return board_copy, fixed_copy, notes_copy, colors_copy
 
 def add_to_history(history, sudoku, notes, colors, board_old, notes_old, colors_old):
     if sudoku.board == board_old and notes == notes_old and colors == colors_old:
@@ -142,7 +143,7 @@ def add_to_history(history, sudoku, notes, colors, board_old, notes_old, colors_
         history.append((board_old, notes_old, colors_old))
 
 def erase(sudoku, notes, colors, selected, history):
-    board_old, notes_old, colors_old = copy_board_info(sudoku, notes, colors)
+    board_old, _, notes_old, colors_old = copy_board_info(sudoku, notes, colors)
 
     sudoku.board[selected] = 0
     notes[selected] = []
@@ -151,7 +152,7 @@ def erase(sudoku, notes, colors, selected, history):
     add_to_history(history, sudoku, notes, colors, board_old, notes_old, colors_old)  
 
 def set_value(sudoku, notes, colors, selected, note_mode, number, history):
-    board_old, notes_old, colors_old = copy_board_info(sudoku, notes, colors)
+    board_old, _, notes_old, colors_old = copy_board_info(sudoku, notes, colors)
 
     if note_mode:
         if sudoku.board[selected]:
@@ -233,7 +234,19 @@ screen.fill(white)
 # game -----------------------------------------
 
 # program loop
+sudoku = None
+notes = None
+colors = None
 while True:
+
+    # save current sudoku to be able to resume game
+    try:
+        saved_board, saved_fixed, saved_notes, saved_colors = copy_board_info(sudoku, notes, colors)
+        saved_sudoku = Sudoku()
+        saved_sudoku.board = saved_board
+        saved_sudoku.fixed = saved_fixed
+    except:
+        saved_sudoku = saved_board = saved_fixed = saved_notes = saved_colors = None
 
     # sudoku setup
     sudoku = Sudoku()
@@ -324,9 +337,25 @@ while True:
             "code_finished"
         )
     )
+    # resume button
+    if saved_sudoku is not None and not saved_sudoku.full():
+        button_width = 100
+        button_height = 50
+        buttons.append(
+            Button(
+                [0, 0],
+                [button_width, button_height],
+                "medium",
+                "white",
+                "Resume",
+                small_font,
+                "resume"
+            )
+        )
 
     # menu screen
     generate = False
+    resume_game = False
     pre_game_loop = True
     while pre_game_loop:
         screen.fill(white)
@@ -340,7 +369,11 @@ while True:
 
         events = pygame.event.get()
         for event in events:
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1: 
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                if saved_sudoku is not None and not saved_sudoku.full():
+                    pre_game_loop = False
+                    resume_game = True
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1: 
                 for button in buttons:
                     if button.hovered(event.pos):
                         if button.id == "generate":
@@ -349,6 +382,9 @@ while True:
                             difficulty = button.value
                         elif button.id == "code_finished":
                             pre_game_loop = False
+                        elif button.id == "resume":
+                            pre_game_loop = False
+                            resume_game = True
                 if input.hovered(event.pos):
                     input.active = True
                 else:
@@ -358,7 +394,7 @@ while True:
             pre_game_loop = False
 
         # check if code gave a valid sudoku
-        if not pre_game_loop and not generate:
+        if not pre_game_loop and not generate and not resume_game:
             if not sudoku.from_string(input.content):
                 pre_game_loop = True
                 input.content = ""
@@ -409,6 +445,11 @@ while True:
         print("\r             ")
 
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+    elif resume_game:
+        print(f"Resume game")
+        sudoku = saved_sudoku
+        notes = saved_notes
+        colors = saved_colors
     else:
         print(f"Generated from code: {input.content}\n")
 
@@ -549,7 +590,7 @@ while True:
                     pyperclip.copy(code)
                 elif event.key == pygame.K_ESCAPE:
                     # go back to menu (override quit)
-                    # return_menu = True
+                    return_menu = True
                     break
                 elif selected is not None and not sudoku.fixed[selected]:
                     # erasing
