@@ -549,7 +549,7 @@ while True:
                     pyperclip.copy(code)
                 elif event.key == pygame.K_ESCAPE:
                     # go back to menu (override quit)
-                    return_menu = True
+                    # return_menu = True
                     break
                 elif selected is not None and not sudoku.fixed[selected]:
                     # erasing
