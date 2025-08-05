@@ -375,7 +375,7 @@ while True:
 
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
     else:
-        print(f"Generated from code: {input.content}")
+        print(f"Generated from code: {input.content}\n")
 
     code = sudoku.to_string()
     sudoku.print()
@@ -385,11 +385,11 @@ while True:
     # button setup for game
     buttons = []
     # number buttons
-    button_spacing = 10
-    button_width = (width - padding["left"] - padding["right"]) / 9 - (8 / 9) * button_spacing
+    button_spacing = 12
+    button_width = (width - padding["left"] - padding["right"]) / 9
     button_height = button_width 
     for n in range(1, 10):
-        pos_x = padding["left"] + (n - 1) * (button_width + button_spacing)
+        pos_x = padding["left"] - button_spacing * 4 + (n - 1) * (button_width + button_spacing)
         pos_y = padding["top"] / 2 - button_height / 2
         buttons.append(
             Button(
