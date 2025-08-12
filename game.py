@@ -82,7 +82,7 @@ def graphical_print(sudoku, notes, colors, current_light_color = None, selected 
         pygame.draw.line(screen, black,
                         (padding["left"], i * (height - padding["top"] - padding["bottom"]) / 9 + padding["top"]),
                         (width - padding["right"], i * (height - padding["top"] - padding["bottom"]) / 9 + padding["top"]), line_width)
-        
+
 def draw_buttons(buttons):
     hovered = False
     for button in buttons:
@@ -93,14 +93,14 @@ def draw_buttons(buttons):
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
     else:
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-        
+
 # game functions ---------------------------
 
 def color_change(current_color, current_color_table):
     current_color = (current_color + 1) % len(color_table)
     current_color_table["light"] = color_table[current_color][0]
     current_color_table["medium"] = color_table[current_color][1]
-    current_color_table["dark"] = color_table[current_color][2] 
+    current_color_table["dark"] = color_table[current_color][2]
     return current_color
 
 def notes_toggle(note_mode, buttons):
@@ -148,8 +148,8 @@ def erase(sudoku, notes, colors, selected, history):
     sudoku.board[selected] = 0
     notes[selected] = []
     colors[selected] = None
-   
-    add_to_history(history, sudoku, notes, colors, board_old, notes_old, colors_old)  
+
+    add_to_history(history, sudoku, notes, colors, board_old, notes_old, colors_old)
 
 def set_value(sudoku, notes, colors, selected, note_mode, number, history):
     board_old, _, notes_old, colors_old = copy_board_info(sudoku, notes, colors)
@@ -171,30 +171,32 @@ def set_value(sudoku, notes, colors, selected, note_mode, number, history):
         notes[selected] = []
         colors[selected] = current_color
 
-    add_to_history(history, sudoku, notes, colors, board_old, notes_old, colors_old)  
+    add_to_history(history, sudoku, notes, colors, board_old, notes_old, colors_old)
 
 # setup ------------------------------------
 
 # pygame setup
 pygame.init()
 pygame.display.set_caption("Sudoku")
+icon = pygame.image.load("resources/icon.ico")
+pygame.display.set_icon(icon)
 width = 1000
 height = 800
 screen = pygame.display.set_mode((width, height))
 clock = pygame.time.Clock()
 
 padding = {
-    "top": 100, 
-    "bottom": 100, 
-    "left": 200, 
+    "top": 100,
+    "bottom": 100,
+    "left": 200,
     "right": 200
 }
 note_padding = 4
 font_size = 36
-font = pygame.font.Font("arial/arial.ttf", font_size)
-small_font = pygame.font.Font("arial/arial.ttf", font_size // 2)
-narrow_font = pygame.font.Font("arial/arialn.ttf", font_size // 2)
-large_font = pygame.font.Font("arial/arialbd.ttf", font_size * 2)
+font = pygame.font.Font("resources/arial.ttf", font_size)
+small_font = pygame.font.Font("resources/arial.ttf", font_size // 2)
+narrow_font = pygame.font.Font("resources/arialn.ttf", font_size // 2)
+large_font = pygame.font.Font("resources/arialbd.ttf", font_size * 2)
 
 transparent_white = (255, 255, 255, 128)
 white = (255, 255, 255)
@@ -373,7 +375,7 @@ while True:
                 if saved_sudoku is not None and not saved_sudoku.full():
                     pre_game_loop = False
                     resume_game = True
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1: 
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 for button in buttons:
                     if button.hovered(event.pos):
                         if button.id == "generate":
@@ -456,20 +458,20 @@ while True:
     code = sudoku.to_string()
     sudoku.print()
     print(f"Code: {code}")
-    history = []   
+    history = []
 
     # button setup for game
     buttons = []
     # number buttons
     button_spacing = 12
     button_width = (width - padding["left"] - padding["right"]) / 9
-    button_height = button_width 
+    button_height = button_width
     for n in range(1, 10):
         pos_x = padding["left"] - button_spacing * 4 + (n - 1) * (button_width + button_spacing)
         pos_y = padding["top"] / 2 - button_height / 2
         buttons.append(
             Button(
-                [pos_x, pos_y], 
+                [pos_x, pos_y],
                 [button_width, button_height],
                 "dark",
                 "white",
@@ -608,9 +610,9 @@ while True:
                 if event.button == 1:
                     # left click
                     board_bounds = pygame.rect.Rect(
-                        padding["left"], 
-                        padding["top"], 
-                        width - padding["left"] - padding["right"], 
+                        padding["left"],
+                        padding["top"],
+                        width - padding["left"] - padding["right"],
                         height - padding["top"] - padding["bottom"]
                     )
                     # check buttons
@@ -647,10 +649,10 @@ while True:
                     if board_bounds.collidepoint(event.pos):
                         row = ((event.pos[1] - padding["top"]) * 9) // (height - padding["top"] - padding["bottom"])
                         col = ((event.pos[0] - padding["left"]) * 9) // (width - padding["left"] - padding["right"])
-                        selected = row * 9 + col                       
+                        selected = row * 9 + col
                 elif event.button == 3:
                     selected = None
-        
+
         if return_menu:
             break
 
@@ -728,7 +730,7 @@ while True:
                     win_screen_loop = False
                 elif event.key == pygame.K_c and event.mod & pygame.KMOD_CTRL:
                     pyperclip.copy(code)
-            elif event.type == pygame.MOUSEBUTTONDOWN: 
+            elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     for button in buttons:
                         if button.hovered(event.pos):
