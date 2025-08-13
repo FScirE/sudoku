@@ -173,6 +173,38 @@ def set_value(sudoku, notes, colors, selected, note_mode, number, history):
 
     add_to_history(history, sudoku, notes, colors, board_old, notes_old, colors_old)
 
+# transitions ------------------------------
+
+def fade(is_out, time, sudoku = None, notes = None, colors = None, buttons = None, current_color_table = None, text_rects = None, sudoku_overlay = None):
+    # time is amount of frames to finish fading
+    time_start = time
+    while time > 0:
+        screen.fill(white)
+
+        if None not in [sudoku, notes, colors]:
+            graphical_print(sudoku, notes, colors)
+        if sudoku_overlay is not None:
+            screen.blit(sudoku_overlay, (0, 0))
+        if None not in [buttons, current_color_table]:
+            for b in buttons:
+                b.draw(screen, current_color_table)
+        if text_rects is not None:
+            for t in text_rects:
+                screen.blit(t[0], t[1])
+
+        alpha = (1 - (time / time_start)) * 255 if is_out else (time / time_start) * 255
+        overlay_color = (255, 255, 255, alpha)
+        layer = pygame.surface.Surface((width, height), pygame.SRCALPHA)
+        layer.fill(overlay_color)
+        screen.blit(layer, (0, 0))
+
+        events = pygame.event.get()
+        check_quit(events)
+
+        time -= 1
+        pygame.display.update()
+        clock.tick(60)
+
 # setup ------------------------------------
 
 # pygame setup
@@ -239,6 +271,7 @@ screen.fill(white)
 sudoku = None
 notes = None
 colors = None
+history = None
 while True:
 
     # save current sudoku to be able to resume game
@@ -247,8 +280,9 @@ while True:
         saved_sudoku = Sudoku()
         saved_sudoku.board = saved_board
         saved_sudoku.fixed = saved_fixed
+        saved_history = copy.deepcopy(history)
     except:
-        saved_sudoku = saved_board = saved_fixed = saved_notes = saved_colors = None
+        saved_sudoku = saved_board = saved_fixed = saved_notes = saved_colors = saved_history = None
 
     # sudoku setup
     sudoku = Sudoku()
@@ -266,6 +300,7 @@ while True:
     selected = None
     difficulty = 0 # between 0-81 inclusive, higher -> easier
     code = ""
+    history = []
 
     # button and textbox setup for menu
     buttons = []
@@ -355,6 +390,15 @@ while True:
             )
         )
 
+    # menu screen text
+    text = large_font.render("SUDOKU", True, black)
+    text_u = font.render("Generate Sudoku", True, black)
+    rectangle = text.get_rect(center = (width / 2, height / 4))
+    rectangle_u = text_u.get_rect(center = (width / 2, height * 2 / 5))
+
+    # fade in before menu
+    fade(False, 10, buttons= buttons + [input], current_color_table= current_color_table, text_rects= [(text, rectangle), (text_u, rectangle_u)])
+
     # menu screen
     generate = False
     resume_game = False
@@ -362,10 +406,6 @@ while True:
     while pre_game_loop:
         screen.fill(white)
 
-        text = large_font.render("SUDOKU", True, black)
-        text_u = font.render("Generate Sudoku", True, black)
-        rectangle = text.get_rect(center = (width / 2, height / 4))
-        rectangle_u = text_u.get_rect(center = (width / 2, height * 2 / 5))
         screen.blit(text, rectangle)
         screen.blit(text_u, rectangle_u)
 
@@ -412,12 +452,19 @@ while True:
         pygame.display.update()
         clock.tick(30)
 
+    # fade out before generation / sudoku start
+    fade(True, 10, buttons= buttons + [input], current_color_table= current_color_table, text_rects= [(text, rectangle), (text_u, rectangle_u)])
+
     if generate:
         # generate random sudoku
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_WAIT)
 
         print("Generating completed board...")
         sudoku.generate_completed_board()
+        text = font.render("Generating solved sudoku", True, black)
+        rectangle = text.get_rect(center = (width / 2, height / 2 - (font_size + 8)))
+        # fade in for generation
+        fade(False, 10, text_rects= [(text, rectangle)])
 
         print("Removing numbers...")
         quit_signal = threading.Event()
@@ -446,19 +493,22 @@ while True:
             clock.tick(30)
         print("\r             ")
 
+        # fade out after generation
+        fade(True, 10, text_rects= [(text_g, rectangle_g), (text_r, rectangle_r), (text_p, rectangle_p)])
+
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
     elif resume_game:
         print(f"Resume game")
         sudoku = saved_sudoku
         notes = saved_notes
         colors = saved_colors
+        history = saved_history
     else:
         print(f"Generated from code: {input.content}\n")
 
     code = sudoku.to_string()
     sudoku.print()
     print(f"Code: {code}")
-    history = []
 
     # button setup for game
     buttons = []
@@ -566,6 +616,9 @@ while True:
         )
     )
 
+    # fade in for game
+    fade(False, 10, sudoku, notes, colors, buttons, current_color_table)
+
     # game loop
     return_menu = False
     while True:
@@ -665,6 +718,9 @@ while True:
         pygame.display.update()
         clock.tick(60)
 
+    # fade out after game
+    fade(True, 10, sudoku, notes, colors, buttons, current_color_table)
+
     # skip win screen
     if return_menu:
         continue
@@ -707,6 +763,16 @@ while True:
         )
     )
 
+    # overlay and text for win screen
+    layer = pygame.surface.Surface((width, height), pygame.SRCALPHA)
+    layer.fill(transparent_white)
+
+    text = font.render("Congratulations!", True, black)
+    rectangle = text.get_rect(center = (width / 2, padding["top"] / 2))
+
+    # fade in before win screen
+    fade(False, 10, sudoku, notes, colors, buttons, current_color_table, [(text, rectangle)], layer)
+
     # win screen
     win_screen_loop = True
     while win_screen_loop:
@@ -714,12 +780,7 @@ while True:
 
         graphical_print(sudoku, notes, colors)
 
-        layer = pygame.surface.Surface((width, height), pygame.SRCALPHA)
-        layer.fill(transparent_white)
         screen.blit(layer, (0, 0))
-
-        text = font.render("Congratulations!", True, black)
-        rectangle = text.get_rect(center = (width / 2, padding["top"] / 2))
         screen.blit(text, rectangle)
 
         events = pygame.event.get()
@@ -746,3 +807,6 @@ while True:
 
         pygame.display.update()
         clock.tick(30)
+
+    # fade out after win screen
+    fade(True, 10, sudoku, notes, colors, buttons, current_color_table, [(text, rectangle)], layer)
