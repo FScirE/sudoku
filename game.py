@@ -6,6 +6,7 @@ import pyperclip
 from sudoku import Sudoku
 from button import Button
 from textbox import Textbox
+from progressbar import ProgressBar
 
 # helper functions -------------------------
 
@@ -83,10 +84,18 @@ def graphical_print(sudoku, notes, colors, current_light_color = None, selected 
                         (padding["left"], i * (height - padding["top"] - padding["bottom"]) / 9 + padding["top"]),
                         (width - padding["right"], i * (height - padding["top"] - padding["bottom"]) / 9 + padding["top"]), line_width)
 
+def update_buttons(buttons):
+    # update the hovered state of all buttons and return hovered button
+    hovered = None
+    for button in buttons:
+        if button.update(pygame.mouse.get_pos()):
+            hovered = button
+    return hovered
+
 def draw_buttons(buttons):
     hovered = False
     for button in buttons:
-        if not hovered and button.hovered(pygame.mouse.get_pos()):
+        if not hovered and button.is_hovered:
             hovered = True
         button.draw(screen, current_color_table)
     if hovered:
@@ -409,6 +418,8 @@ while True:
         screen.blit(text, rectangle)
         screen.blit(text_u, rectangle_u)
 
+        button = update_buttons(buttons)
+
         events = pygame.event.get()
         for event in events:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
@@ -416,17 +427,16 @@ while True:
                     pre_game_loop = False
                     resume_game = True
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                for button in buttons:
-                    if button.hovered(event.pos):
-                        if button.id == "generate":
-                            pre_game_loop = False
-                            generate = True
-                            difficulty = button.value
-                        elif button.id == "code_finished":
-                            pre_game_loop = False
-                        elif button.id == "resume":
-                            pre_game_loop = False
-                            resume_game = True
+                if button is not None:
+                    if button.id == "generate":
+                        pre_game_loop = False
+                        generate = True
+                        difficulty = button.value
+                    elif button.id == "code_finished":
+                        pre_game_loop = False
+                    elif button.id == "resume":
+                        pre_game_loop = False
+                        resume_game = True
                 if input.hovered(event.pos):
                     input.active = True
                 else:
@@ -466,6 +476,18 @@ while True:
         # fade in for generation
         fade(False, 10, text_rects= [(text, rectangle)])
 
+        # create progress bar
+        bar_width = 680
+        bar_height = 20
+        progress_bar = ProgressBar(
+            [width / 2 - bar_width / 2, height * 2 / 3 - bar_height / 2],
+            [bar_width, bar_height],
+            "medium",
+            "dark",
+            difficulty,
+            81
+        )
+
         print("Removing numbers...")
         quit_signal = threading.Event()
         thread = threading.Thread(target=sudoku.remove_board_numbers, args=(difficulty,), kwargs={"quit_signal": quit_signal,})
@@ -476,25 +498,46 @@ while True:
             text_g = font.render("Solved sudoku generated", True, black)
             text_r = font.render("Removing numbers...", True, black)
             sudoku.atomic_lock.acquire()
-            print(f"Remaining: {sudoku.atomic_counter} ", end="\r")
-            text_p = font.render(f"Remaining: {sudoku.atomic_counter}", True, black)
+            counter = sudoku.atomic_counter
             sudoku.atomic_lock.release()
+            print(f"Remaining: {counter} ", end="\r")
+            text_p = font.render(f"Remaining: {counter}", True, black)
+
             rectangle_g = text_g.get_rect(center = (width / 2, height / 2 - (font_size + 8)))
             rectangle_r = text_r.get_rect(center = (width / 2, height / 2))
             rectangle_p = text_p.get_rect(center = (width / 2, height / 2 + (font_size + 8)))
+
             screen.blit(text_g, rectangle_g)
             screen.blit(text_r, rectangle_r)
             screen.blit(text_p, rectangle_p)
+
+            progress_bar.set_progress(81 - counter)
+            progress_bar.draw(screen, current_color_table)
 
             events = pygame.event.get()
             check_quit(events, [thread], quit_signal)
 
             pygame.display.update()
-            clock.tick(30)
+            clock.tick(60)
         print("\r             ")
 
+        # finished generating text (only shows during transition)
+        screen.fill(white)
+        text_g = font.render("Solved sudoku generated", True, black)
+        text_r = font.render("Finished Removing Numbers", True, black)
+        text_p = font.render(f"Remaining: 0", True, black)
+        rectangle_g = text_g.get_rect(center = (width / 2, height / 2 - (font_size + 8)))
+        rectangle_r = text_r.get_rect(center = (width / 2, height / 2))
+        rectangle_p = text_p.get_rect(center = (width / 2, height / 2 + (font_size + 8)))
+        screen.blit(text_g, rectangle_g)
+        screen.blit(text_r, rectangle_r)
+        screen.blit(text_p, rectangle_p)
+        progress_bar.set_progress(81)
+        progress_bar.draw(screen, current_color_table)
+        pygame.display.update()
+
         # fade out after generation
-        fade(True, 10, text_rects= [(text_g, rectangle_g), (text_r, rectangle_r), (text_p, rectangle_p)])
+        fade(True, 10, buttons= [progress_bar], current_color_table= current_color_table, text_rects= [(text_g, rectangle_g), (text_r, rectangle_r), (text_p, rectangle_p)])
 
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
     elif resume_game:
@@ -630,6 +673,8 @@ while True:
             else:
                 pass
 
+        button = update_buttons(buttons)
+
         events = pygame.event.get()
         for event in events:
             # keyboard events
@@ -670,32 +715,31 @@ while True:
                     )
                     # check buttons
                     button_pressed = False
-                    for button in buttons:
-                        if button.hovered(event.pos):
-                            if button.id == "color":
-                                current_color = color_change(current_color, current_color_table)
-                                button_pressed = True
-                            elif button.id == "notes":
-                                note_mode = notes_toggle(note_mode, buttons)
-                                button_pressed = True
-                            elif button.id == "undo":
-                                if history:
-                                    notes, colors = undo(history, sudoku, notes, colors)
-                                button_pressed = True
-                            elif button.id == "erase":
-                                if selected:
-                                    erase(sudoku, notes, colors, selected, history)
-                                button_pressed = True
-                            elif button.id == "copy":
-                                pyperclip.copy(code)
-                            elif button.id == "back":
-                                return_menu = True
-                                break
-                            elif button.id.count("num_"):
-                                if selected:
-                                    number = button.value
-                                    set_value(sudoku, notes, colors, selected, note_mode, number, history)
-                                button_pressed = True
+                    if button is not None:
+                        if button.id == "color":
+                            current_color = color_change(current_color, current_color_table)
+                            button_pressed = True
+                        elif button.id == "notes":
+                            note_mode = notes_toggle(note_mode, buttons)
+                            button_pressed = True
+                        elif button.id == "undo":
+                            if history:
+                                notes, colors = undo(history, sudoku, notes, colors)
+                            button_pressed = True
+                        elif button.id == "erase":
+                            if selected:
+                                erase(sudoku, notes, colors, selected, history)
+                            button_pressed = True
+                        elif button.id == "copy":
+                            pyperclip.copy(code)
+                        elif button.id == "back":
+                            return_menu = True
+                            break
+                        elif button.id.count("num_"):
+                            if selected:
+                                number = button.value
+                                set_value(sudoku, notes, colors, selected, note_mode, number, history)
+                            button_pressed = True
                     # check board
                     if not button_pressed:
                         selected = None
@@ -783,6 +827,8 @@ while True:
         screen.blit(layer, (0, 0))
         screen.blit(text, rectangle)
 
+        button = update_buttons(buttons)
+
         events = pygame.event.get()
         for event in events:
             # new game
@@ -793,13 +839,12 @@ while True:
                     pyperclip.copy(code)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
-                    for button in buttons:
-                        if button.hovered(event.pos):
-                            if button.id == "menu":
-                                win_screen_loop = False
-                                break
-                            elif button.id == "copy":
-                                pyperclip.copy(code)
+                    if button is not None:
+                        if button.id == "menu":
+                            win_screen_loop = False
+                            break
+                        elif button.id == "copy":
+                            pyperclip.copy(code)
 
         draw_buttons(buttons)
 
