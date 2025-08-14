@@ -239,6 +239,9 @@ small_font = pygame.font.Font("resources/arial.ttf", font_size // 2)
 narrow_font = pygame.font.Font("resources/arialn.ttf", font_size // 2)
 large_font = pygame.font.Font("resources/arialbd.ttf", font_size * 2)
 
+border_radius = [8, 8, 8, 8]
+corner_border_radius = [0, 0, 0, 8]
+
 transparent_white = (255, 255, 255, 128)
 white = (255, 255, 255)
 black = (0, 0, 0)
@@ -325,7 +328,8 @@ while True:
             "Easy",
             small_font,
             "generate",
-            36
+            36,
+            border_radius
         )
     )
     # medium button
@@ -340,7 +344,8 @@ while True:
             "Medium",
             small_font,
             "generate",
-            18
+            18,
+            border_radius
         )
     )
     # hard button
@@ -355,7 +360,8 @@ while True:
             "Hard",
             small_font,
             "generate",
-            0
+            0,
+            border_radius
         )
     )
     # code input
@@ -367,7 +373,8 @@ while True:
         "medium",
         "black",
         narrow_font,
-        "code_input"
+        "code_input",
+        border_radius= border_radius
     )
     # from code button
     button_width = 160
@@ -380,7 +387,8 @@ while True:
             "white",
             "Import Sudoku",
             small_font,
-            "code_finished"
+            "code_finished",
+            border_radius= border_radius
         )
     )
     # resume button
@@ -395,7 +403,8 @@ while True:
                 "white",
                 "Resume",
                 small_font,
-                "resume"
+                "resume",
+                border_radius= corner_border_radius
             )
         )
 
@@ -485,7 +494,8 @@ while True:
             "medium",
             "dark",
             difficulty,
-            81
+            81,
+            border_radius
         )
 
         print("Removing numbers...")
@@ -571,7 +581,8 @@ while True:
                 f"{n}",
                 small_font,
                 f"num_{n}",
-                n
+                n,
+                border_radius
             )
         )
     # color button
@@ -586,6 +597,7 @@ while True:
             "Change Color",
             small_font,
             "color",
+            border_radius= border_radius
         )
     )
     # note mode button
@@ -600,6 +612,7 @@ while True:
             "Notes: OFF",
             small_font,
             "notes",
+            border_radius= border_radius
         )
     )
     # undo button
@@ -614,6 +627,7 @@ while True:
             "Undo",
             small_font,
             "undo",
+            border_radius= border_radius
         )
     )
     # erase button
@@ -628,6 +642,7 @@ while True:
             "Erase",
             small_font,
             "erase",
+            border_radius= border_radius
         )
     )
     # copy button
@@ -642,6 +657,7 @@ while True:
             "Copy",
             small_font,
             "copy",
+            border_radius= border_radius
         )
     )
     # back button
@@ -656,6 +672,7 @@ while True:
             "Back",
             small_font,
             "back",
+            border_radius= corner_border_radius
         )
     )
 
@@ -789,7 +806,8 @@ while True:
             "white",
             "Return To Menu",
             small_font,
-            "menu"
+            "menu",
+            border_radius= border_radius
         )
     )
     # copy button
@@ -804,6 +822,7 @@ while True:
             "Copy",
             small_font,
             "copy",
+            border_radius= border_radius
         )
     )
 

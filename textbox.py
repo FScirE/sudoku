@@ -2,8 +2,9 @@ import pyperclip
 import pygame
 
 class Textbox:
-    def __init__(self, pos, size, bg_color, fg_color, font, id):
+    def __init__(self, pos, size, bg_color, fg_color, font, id, border_radius = [-1, -1, -1, -1]):
         self.bounds = pygame.rect.Rect(pos[0], pos[1], size[0], size[1])
+        self.border_radius = border_radius
 
         self.color = [bg_color, fg_color] # options: "white, black, light, medium, dark"
         self.content = ""
@@ -16,7 +17,7 @@ class Textbox:
             return False
         for event in events:
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_v and event.mod & pygame.KMOD_CTRL: 
+                if event.key == pygame.K_v and event.mod & pygame.KMOD_CTRL:
                     content = pyperclip.paste()
                     content = content.replace("\r", "")
                     content = content.replace("\n", "")
@@ -40,7 +41,7 @@ class Textbox:
 
     def hovered(self, mouse_pos):
         return self.bounds.collidepoint(mouse_pos)
-    
+
     def draw(self, screen, color_table):
         bg_color = color_table[self.color[0]]
         fg_color = color_table[self.color[1]]
@@ -49,7 +50,15 @@ class Textbox:
             self.bounds.x + self.bounds.width / 2,
             self.bounds.y + self.bounds.height / 2
         ))
-        pygame.draw.rect(screen, bg_color, self.bounds)
+        pygame.draw.rect(
+            screen,
+            bg_color,
+            self.bounds,
+            border_top_left_radius= self.border_radius[0],
+            border_top_right_radius= self.border_radius[1],
+            border_bottom_left_radius= self.border_radius[2],
+            border_bottom_right_radius= self.border_radius[3]
+        )
         if self.active:
             pygame.draw.line(screen, fg_color, rectangle.topright, rectangle.bottomright, 2)
         screen.blit(text, rectangle)
