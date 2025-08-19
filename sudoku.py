@@ -97,8 +97,8 @@ class Sudoku:
 
     def print(self):
         return print_board(self.board)
-    
-    def to_string(self):    
+
+    def to_string(self):
         # row based string
         str_r = "r"
         zero_r = 0
@@ -142,7 +142,7 @@ class Sudoku:
                     zero_c = 0
                     str_c += str(value_c)
         # return shortest option
-        return str_r if len(str_r) <= len(str_c) else str_c    
+        return str_r if len(str_r) <= len(str_c) else str_c
 
     def from_string(self, string):
         board = [0] * 81
@@ -192,7 +192,7 @@ class Sudoku:
         self.board = board
         self.fixed = fixed
         return True
-    
+
     def solve(self):
         self.board = solve_board(self.board[:], 1)[0]
 
@@ -268,13 +268,13 @@ def get_available_smart(board, index):
                 index_r = row * 9 + r
                 index_c = r * 9 + col
                 if (not board[index_r] and
-                    index_r != index and 
-                    not other_r and 
+                    index_r != index and
+                    not other_r and
                     not conflicts(board, index_r, val)):
                     other_r = True
                 if (not board[index_c] and
-                    index_c != index and 
-                    not other_c and 
+                    index_c != index and
+                    not other_c and
                     not conflicts(board, index_c, val)):
                     other_c = True
             if not other_r or not other_c:
@@ -305,13 +305,13 @@ def get_available_analysis(board, index):
                 index_r = row * 9 + r
                 index_c = r * 9 + col
                 if (not board[index_r] and
-                    index_r != index and 
-                    not other_r and 
+                    index_r != index and
+                    not other_r and
                     not conflicts(board, index_r, val)):
                     other_r = True
                 if (not board[index_c] and
-                    index_c != index and 
-                    not other_c and 
+                    index_c != index and
+                    not other_c and
                     not conflicts(board, index_c, val)):
                     other_c = True
             if not other_r:

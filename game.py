@@ -500,7 +500,7 @@ while True:
 
         print("Removing numbers...")
         quit_signal = threading.Event()
-        thread = threading.Thread(target=sudoku.remove_board_numbers, args=(difficulty,), kwargs={"quit_signal": quit_signal,})
+        thread = threading.Thread(target=sudoku.remove_board_numbers, args=(difficulty, False), kwargs={"quit_signal": quit_signal,})
         thread.start()
         while thread.is_alive():
             screen.fill(white)
