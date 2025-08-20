@@ -1,7 +1,7 @@
 import pygame
 
 class ProgressBar:
-    def __init__(self, pos, size, bg_color, fg_color, progress = 0, max_progress = 100, border_radius = [-1, -1, -1, -1]):
+    def __init__(self, pos, size, bg_color, fg_color, progress = 0, max_progress = 100, border_radius = [-1, -1, -1, -1], shadow = None):
         self.progress = progress
         self.max_progress = max_progress
 
@@ -10,6 +10,8 @@ class ProgressBar:
         self.border_radius = border_radius
 
         self.color = [bg_color, fg_color] # options: "white, black, light, medium, dark"
+
+        self.shadow = shadow
 
     def set_fg_bounds(self):
         self.fg_bounds = self.bg_bounds.copy()
@@ -20,6 +22,9 @@ class ProgressBar:
         self.set_fg_bounds()
 
     def draw(self, screen, color_table):
+        if self.shadow is not None:
+            self.shadow.draw(screen)
+
         bg_color = color_table[self.color[0]]
         fg_color = color_table[self.color[1]]
         pygame.draw.rect(

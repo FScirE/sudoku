@@ -2,7 +2,7 @@ import pyperclip
 import pygame
 
 class Textbox:
-    def __init__(self, pos, size, bg_color, fg_color, font, id, border_radius = [-1, -1, -1, -1]):
+    def __init__(self, pos, size, bg_color, fg_color, font, id, border_radius = [-1, -1, -1, -1], shadow = None):
         self.bounds = pygame.rect.Rect(pos[0], pos[1], size[0], size[1])
         self.border_radius = border_radius
 
@@ -11,6 +11,8 @@ class Textbox:
         self.font = font
         self.id = id
         self.active = False
+
+        self.shadow = shadow
 
     def handle_input(self, events):
         if not self.active:
@@ -43,6 +45,9 @@ class Textbox:
         return self.bounds.collidepoint(mouse_pos)
 
     def draw(self, screen, color_table):
+        if self.shadow is not None:
+            self.shadow.draw(screen)
+
         bg_color = color_table[self.color[0]]
         fg_color = color_table[self.color[1]]
         text = self.font.render(self.content, True, fg_color)

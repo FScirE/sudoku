@@ -3,33 +3,45 @@ import math
 
 class Shadow:
     def __init__(self, pos, size, strength, radius, border_radius = [-1, -1, -1, -1], offset = [0, 0], extra_size = 0, resolution = 20):
-        self.pos = [pos[0] + offset[0] - extra_size / 2, pos[1] + offset[1] - extra_size / 2]
-        self.size = [size[0] + extra_size, size[1] + extra_size]
+        self.pos = [pos[0] + offset[0], pos[1] + offset[1]]
+        self.size = size
+        self.extra_size = extra_size
         self.strength = strength
         self.radius = radius
         self.border_radius = border_radius
         self.resolution = resolution
         self.create_layers()
 
-    def create_layers(self):
+    def create_layers(self, polynomial = False):
         self.layers = []
         max_opacity = self.strength
-        min_opacity = 4
+        min_opacity = 1
         # set border radius relative to width
         if self.border_radius == [-1, -1, -1, -1]:
             border_radius_fractions = self.border_radius
         else:
             border_radius_fractions = [
-                self.border_radius[0] / self.size[0],
-                self.border_radius[1] / self.size[0],
-                self.border_radius[2] / self.size[0],
-                self.border_radius[3] / self.size[0]
+                self.border_radius[0] / (self.size[0]),
+                self.border_radius[1] / (self.size[0]),
+                self.border_radius[2] / (self.size[0]),
+                self.border_radius[3] / (self.size[0])
             ]
-        # math for shadow opacity curve (opacity = ax^2 + bx + c)
-        a = (min_opacity - max_opacity) / ((self.resolution - 1) ** 2)
-        b = -2 * a * (self.resolution - 1)
-        c = min_opacity
-        f = lambda x: a * (x ** 2) + b * x + c
+        if polynomial:
+            # math for shadow opacity curve (opacity = ax^2 + bx + c)
+            a = (min_opacity - max_opacity) / ((self.resolution - 1) ** 2)
+            b = -2 * a * (self.resolution - 1)
+            c = min_opacity
+            f = lambda x: a * (x ** 2) + b * x + c
+        else:
+            # newer opacity curve (opacity = a*arctan(bx + c) + d)
+            d = (max_opacity + min_opacity) / 2
+            c = -4 # set freely (<0, larger -> more linear)
+            b = (-2 * c) / (self.resolution - 1)
+            a = (min_opacity - d) / math.atan(c)
+            f = lambda x: a * math.atan(b * x + c) + d
+        # add extra size
+        self.pos = [self.pos[0] - self.extra_size / 2, self.pos[1] - self.extra_size / 2]
+        self.size = [self.size[0] + self.extra_size, self.size[1] + self.extra_size]
         # create layers
         for i in range(self.resolution):
             opacity = f(i)

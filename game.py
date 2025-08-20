@@ -7,6 +7,7 @@ from sudoku import Sudoku
 from button import Button
 from textbox import Textbox
 from progressbar import ProgressBar
+from shadow import Shadow
 
 # helper functions -------------------------
 
@@ -31,7 +32,10 @@ def check_quit(events, threads = None, quit_signal = None):
             pygame.quit()
             sys.exit()
 
-def graphical_print(sudoku, notes, colors, current_light_color = None, selected = None):
+def graphical_print(sudoku, notes, colors, current_light_color = None, selected = None, shadow = None):
+    # draw shadow
+    if shadow is not None:
+        shadow.draw(screen)
     # draw cells
     for i in range(81):
         if colors[i] is not None:
@@ -41,14 +45,16 @@ def graphical_print(sudoku, notes, colors, current_light_color = None, selected 
         cell_w = (width - padding["left"] - padding["right"]) / 9
         cell_h = (height - padding["top"] - padding["bottom"]) / 9
         # draw selected marking
-        if selected is not None and i == selected and not sudoku.fixed[selected]:
-            rect = pygame.rect.Rect(
-                (i % 9) * cell_w + padding["left"],
-                (i // 9) * cell_h + padding["top"],
-                cell_w,
-                cell_h
-            )
-            pygame.draw.rect(screen, current_light_color, rect)
+        cell_bg = white
+        if selected is not None and i == selected:
+            cell_bg = current_light_color
+        rect = pygame.rect.Rect(
+            (i % 9) * cell_w + padding["left"],
+            (i // 9) * cell_h + padding["top"],
+            cell_w,
+            cell_h
+        )
+        pygame.draw.rect(screen, cell_bg, rect)
         # draw notes
         cell_notes = notes[i]
         for note in cell_notes:
@@ -102,6 +108,14 @@ def draw_buttons(buttons):
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
     else:
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+
+def create_default_shadow(pos, size, border_radius = [-1, -1, -1, -1], extra_offset = [0, 0], extra_extra_size = 0):
+    strength = 60
+    radius = 36
+    offset = [4 + extra_offset[0], 4 + extra_offset[1]]
+    extra_size = 20 + extra_extra_size
+    resolution = 50
+    return Shadow(pos, size, strength, radius, border_radius, offset, extra_size, resolution)
 
 # game functions ---------------------------
 
@@ -184,14 +198,14 @@ def set_value(sudoku, notes, colors, selected, note_mode, number, history):
 
 # transitions ------------------------------
 
-def fade(is_out, time, sudoku = None, notes = None, colors = None, buttons = None, current_color_table = None, text_rects = None, sudoku_overlay = None):
+def fade(is_out, time, sudoku = None, notes = None, colors = None, grid_shadow = None, buttons = None, current_color_table = None, text_rects = None, sudoku_overlay = None):
     # time is amount of frames to finish fading
     time_start = time
     while time > 0:
         screen.fill(white)
 
         if None not in [sudoku, notes, colors]:
-            graphical_print(sudoku, notes, colors)
+            graphical_print(sudoku, notes, colors, shadow= grid_shadow)
         if sudoku_overlay is not None:
             screen.blit(sudoku_overlay, (0, 0))
         if None not in [buttons, current_color_table]:
@@ -319,92 +333,110 @@ while True:
     # easy button
     button_width = 90
     button_height = 60
+    pos = [width * 5 / 13 - button_width / 2, height * 19 / 40 - button_height / 2]
+    size = [button_width, button_height]
     buttons.append(
         Button(
-            [width * 5 / 13 - button_width / 2, height * 19 / 40 - button_height / 2],
-            [button_width, button_height],
+            pos,
+            size,
             "dark",
             "white",
             "Easy",
             small_font,
             "generate",
             36,
-            border_radius
+            border_radius,
+            shadow= create_default_shadow(pos, size, border_radius)
         )
     )
     # medium button
     button_width = 100
     button_height = 60
+    pos = [width / 2 - button_width / 2, height * 19 / 40 - button_height / 2]
+    size = [button_width, button_height]
     buttons.append(
         Button(
-            [width / 2 - button_width / 2, height * 19 / 40 - button_height / 2],
-            [button_width, button_height],
+            pos,
+            size,
             "dark",
             "white",
             "Medium",
             small_font,
             "generate",
             18,
-            border_radius
+            border_radius,
+            shadow= create_default_shadow(pos, size, border_radius)
         )
     )
     # hard button
     button_width = 90
     button_height = 60
+    pos = [width * 8 / 13 - button_width / 2, height * 19 / 40 - button_height / 2]
+    size = [button_width, button_height]
     buttons.append(
         Button(
-            [width * 8 / 13 - button_width / 2, height * 19 / 40 - button_height / 2],
-            [button_width, button_height],
+            pos,
+            size,
             "dark",
             "white",
             "Hard",
             small_font,
             "generate",
             0,
-            border_radius
+            border_radius,
+            shadow= create_default_shadow(pos, size, border_radius)
         )
     )
     # code input
     input_width = 680
     input_height = 50
+    pos = [width / 2 - input_width / 2, height * 3 / 5 - input_height / 2]
+    size = [input_width, input_height]
     input = Textbox(
-        [width / 2 - input_width / 2, height * 3 / 5 - input_height / 2],
-        [input_width, input_height],
+        pos,
+        size,
         "medium",
         "black",
         narrow_font,
         "code_input",
-        border_radius= border_radius
+        border_radius= border_radius,
+        shadow= create_default_shadow(pos, size, border_radius)
     )
     # from code button
     button_width = 160
     button_height = 60
+    pos = [width / 2 - button_width / 2, height * 7 / 10 - button_height / 2]
+    size = [button_width, button_height]
     buttons.append(
         Button(
-            [width / 2 - button_width / 2, height * 7 / 10 - button_height / 2],
-            [button_width, button_height],
+            pos,
+            size,
             "dark",
             "white",
             "Import Sudoku",
             small_font,
             "code_finished",
-            border_radius= border_radius
+            border_radius= border_radius,
+            shadow= create_default_shadow(pos, size, border_radius)
         )
     )
     # resume button
     if saved_sudoku is not None and not saved_sudoku.full():
         button_width = 100
         button_height = 50
+        pos = [0, 0]
+        size = [button_width, button_height]
         buttons.append(
             Button(
-                [0, 0],
-                [button_width, button_height],
+                pos,
+                size,
                 "medium",
                 "white",
                 "Resume",
                 small_font,
                 "resume",
-                border_radius= corner_border_radius
+                border_radius= corner_border_radius,
+                shadow= create_default_shadow(pos, size, corner_border_radius, [-4, -4])
             )
         )
 
@@ -488,14 +520,17 @@ while True:
         # create progress bar
         bar_width = 680
         bar_height = 20
+        pos = [width / 2 - bar_width / 2, height * 2 / 3 - bar_height / 2]
+        size = [bar_width, bar_height]
         progress_bar = ProgressBar(
-            [width / 2 - bar_width / 2, height * 2 / 3 - bar_height / 2],
-            [bar_width, bar_height],
+            pos,
+            size,
             "medium",
             "dark",
             difficulty,
             81,
-            border_radius
+            border_radius,
+            shadow= create_default_shadow(pos, size, border_radius)
         )
 
         print("Removing numbers...")
@@ -572,112 +607,142 @@ while True:
     for n in range(1, 10):
         pos_x = padding["left"] - button_spacing * 4 + (n - 1) * (button_width + button_spacing)
         pos_y = padding["top"] / 2 - button_height / 2
+        pos = [pos_x, pos_y]
+        size = [button_width, button_height]
+        # create button for number
         buttons.append(
             Button(
-                [pos_x, pos_y],
-                [button_width, button_height],
+                pos,
+                size,
                 "dark",
                 "white",
                 f"{n}",
                 small_font,
                 f"num_{n}",
                 n,
-                border_radius
+                border_radius,
+                shadow= create_default_shadow(pos, size, border_radius)
             )
         )
     # color button
     button_width = 140
     button_height = 50
+    pos = [width * 5 / 14 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2]
+    size = [button_width, button_height]
     buttons.append(
         Button(
-            [width * 5 / 14 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2],
-            [button_width, button_height],
+            pos,
+            size,
             "dark",
             "white",
             "Change Color",
             small_font,
             "color",
-            border_radius= border_radius
+            border_radius= border_radius,
+            shadow= create_default_shadow(pos, size, border_radius)
         )
     )
     # note mode button
     button_width = 115
     button_height = 50
+    pos = [width / 7 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2]
+    size = [button_width, button_height]
     buttons.append(
         Button(
-            [width / 7 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2],
-            [button_width, button_height],
+            pos,
+            size,
             "dark",
             "white",
             "Notes: OFF",
             small_font,
             "notes",
-            border_radius= border_radius
+            border_radius= border_radius,
+            shadow= create_default_shadow(pos, size, border_radius)
         )
     )
     # undo button
     button_width = 70
     button_height = 50
+    pos = [width * 5 / 7 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2]
+    size = [button_width, button_height]
     buttons.append(
         Button(
-            [width * 5 / 7 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2],
-            [button_width, button_height],
+            pos,
+            size,
             "dark",
             "white",
             "Undo",
             small_font,
             "undo",
-            border_radius= border_radius
+            border_radius= border_radius,
+            shadow= create_default_shadow(pos, size, border_radius)
         )
     )
     # erase button
     button_width = 75
     button_height = 50
+    pos = [width * 6 / 7 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2]
+    size = [button_width, button_height]
     buttons.append(
         Button(
-            [width * 6 / 7 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2],
-            [button_width, button_height],
+            pos,
+            size,
             "dark",
             "white",
             "Erase",
             small_font,
             "erase",
-            border_radius= border_radius
+            border_radius= border_radius,
+            shadow= create_default_shadow(pos, size, border_radius)
         )
     )
     # copy button
     button_width = 70
     button_height = 50
+    pos = [width * 11 / 20 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2]
+    size = [button_width, button_height]
     buttons.append(
         Button(
-            [width * 11 / 20 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2],
-            [button_width, button_height],
+            pos,
+            size,
             "dark",
             "white",
             "Copy",
             small_font,
             "copy",
-            border_radius= border_radius
+            border_radius= border_radius,
+            shadow= create_default_shadow(pos, size, border_radius)
         )
     )
     # back button
     button_width = 70
     button_height = 50
+    pos = [0, 0]
+    size = [button_width, button_height]
     buttons.append(
         Button(
-            [0, 0],
-            [button_width, button_height],
+            pos,
+            size,
             "medium",
             "white",
             "Back",
             small_font,
             "back",
-            border_radius= corner_border_radius
+            border_radius= corner_border_radius,
+            shadow= create_default_shadow(pos, size, corner_border_radius, [-4, -4])
         )
     )
 
+    # shadow for sudoku grid
+    grid_shadow = create_default_shadow(
+        [padding["left"], padding["top"]],
+        [width - padding["left"] - padding["right"], height - padding["top"] - padding["bottom"]],
+        extra_offset= [2, 2],
+        extra_extra_size= 2
+    )
+
     # fade in for game
-    fade(False, 10, sudoku, notes, colors, buttons, current_color_table)
+    fade(False, 10, sudoku, notes, colors, grid_shadow, buttons, current_color_table)
 
     # game loop
     return_menu = False
@@ -744,7 +809,7 @@ while True:
                                 notes, colors = undo(history, sudoku, notes, colors)
                             button_pressed = True
                         elif button.id == "erase":
-                            if selected:
+                            if selected is not None and not sudoku.fixed[selected]:
                                 erase(sudoku, notes, colors, selected, history)
                             button_pressed = True
                         elif button.id == "copy":
@@ -753,7 +818,7 @@ while True:
                             return_menu = True
                             break
                         elif button.id.count("num_"):
-                            if selected:
+                            if selected is not None and not sudoku.fixed[selected]:
                                 number = button.value
                                 set_value(sudoku, notes, colors, selected, note_mode, number, history)
                             button_pressed = True
@@ -770,7 +835,7 @@ while True:
         if return_menu:
             break
 
-        graphical_print(sudoku, notes, colors, current_color_table["light"], selected)
+        graphical_print(sudoku, notes, colors, current_color_table["light"], selected, grid_shadow)
 
         draw_buttons(buttons)
 
@@ -780,7 +845,7 @@ while True:
         clock.tick(60)
 
     # fade out after game
-    fade(True, 10, sudoku, notes, colors, buttons, current_color_table)
+    fade(True, 10, sudoku, notes, colors, grid_shadow, buttons, current_color_table)
 
     # skip win screen
     if return_menu:
@@ -798,31 +863,37 @@ while True:
     # return button
     button_width = 155
     button_height = 50
+    pos = [width * 3 / 7 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2]
+    size = [button_width, button_height]
     buttons.append(
         Button(
-            [width * 3 / 7 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2],
-            [button_width, button_height],
+            pos,
+            size,
             "dark",
             "white",
             "Return To Menu",
             small_font,
             "menu",
-            border_radius= border_radius
+            border_radius= border_radius,
+            shadow= create_default_shadow(pos, size, border_radius)
         )
     )
     # copy button
     button_width = 70
     button_height = 50
+    pos = [width * 4 / 7 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2]
+    size = [button_width, button_height]
     buttons.append(
         Button(
-            [width * 4 / 7 - button_width / 2, height - padding["bottom"] / 2 - button_height / 2],
-            [button_width, button_height],
+            pos,
+            size,
             "dark",
             "white",
             "Copy",
             small_font,
             "copy",
-            border_radius= border_radius
+            border_radius= border_radius,
+            shadow= create_default_shadow(pos, size, border_radius)
         )
     )
 
@@ -834,14 +905,14 @@ while True:
     rectangle = text.get_rect(center = (width / 2, padding["top"] / 2))
 
     # fade in before win screen
-    fade(False, 10, sudoku, notes, colors, buttons, current_color_table, [(text, rectangle)], layer)
+    fade(False, 10, sudoku, notes, colors, grid_shadow, buttons, current_color_table, [(text, rectangle)], layer)
 
     # win screen
     win_screen_loop = True
     while win_screen_loop:
         screen.fill(white)
 
-        graphical_print(sudoku, notes, colors)
+        graphical_print(sudoku, notes, colors, shadow= grid_shadow)
 
         screen.blit(layer, (0, 0))
         screen.blit(text, rectangle)
@@ -873,4 +944,4 @@ while True:
         clock.tick(30)
 
     # fade out after win screen
-    fade(True, 10, sudoku, notes, colors, buttons, current_color_table, [(text, rectangle)], layer)
+    fade(True, 10, sudoku, notes, colors, grid_shadow, buttons, current_color_table, [(text, rectangle)], layer)

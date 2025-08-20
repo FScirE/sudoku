@@ -1,7 +1,7 @@
 import pygame
 
 class Button:
-    def __init__(self, pos, size, bg_color, fg_color, text, font, id, value = 0, border_radius = [-1, -1, -1, -1], hover_size_offset = 5):
+    def __init__(self, pos, size, bg_color, fg_color, text, font, id, value = 0, border_radius = [-1, -1, -1, -1], hover_size_offset = 5, shadow = None):
         self.bounds = pygame.rect.Rect(pos[0], pos[1], size[0], size[1])
         self.border_radius = border_radius
 
@@ -12,6 +12,8 @@ class Button:
         self.value = value
         self.hover_size_offset = hover_size_offset
 
+        self.shadow = shadow
+
         self.is_hovered = False
 
     def update(self, mouse_pos):
@@ -19,6 +21,9 @@ class Button:
         return self.is_hovered
 
     def draw(self, screen, color_table):
+        if self.shadow is not None:
+            self.shadow.draw(screen)
+
         bg_color = color_table[self.color[0]]
         fg_color = color_table[self.color[1]]
         text = self.font.render(self.text, True, fg_color)
