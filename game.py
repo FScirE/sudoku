@@ -111,9 +111,9 @@ def draw_buttons(buttons):
 
 def create_default_shadow(pos, size, border_radius = [-1, -1, -1, -1], extra_offset = [0, 0], extra_extra_size = 0):
     strength = 60
-    radius = 36
+    radius = 32
     offset = [4 + extra_offset[0], 4 + extra_offset[1]]
-    extra_size = 20 + extra_extra_size
+    extra_size = 16 + extra_extra_size
     resolution = 50
     return Shadow(pos, size, strength, radius, border_radius, offset, extra_size, resolution)
 
@@ -779,11 +779,11 @@ while True:
                     if event.key in [pygame.K_BACKSPACE, pygame.K_SPACE, pygame.K_0, pygame.K_KP0]:
                         erase(sudoku, notes, colors, selected, history)
                     # setting number
-                    elif pygame.K_1 <= event.key <= pygame.K_9 or pygame.K_KP0 <= event.key <= pygame.K_KP9:
+                    elif pygame.K_1 <= event.key <= pygame.K_9 or pygame.K_KP1 <= event.key <= pygame.K_KP9:
                         if pygame.K_1 <= event.key <= pygame.K_9:
                             number = event.key - pygame.K_0
                         else:
-                            number = event.key - pygame.K_KP0
+                            number = event.key - pygame.K_KP1 + 1
                         set_value(sudoku, notes, colors, selected, note_mode, number, history)
             # mouse events
             elif event.type == pygame.MOUSEBUTTONDOWN:

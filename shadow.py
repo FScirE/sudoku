@@ -35,7 +35,7 @@ class Shadow:
         else:
             # newer opacity curve (opacity = a*arctan(bx + c) + d)
             d = (max_opacity + min_opacity) / 2
-            c = -4 # set freely (<0, larger -> more linear)
+            c = 4 # set freely !=0, closer to 0 => more linear)
             b = (-2 * c) / (self.resolution - 1)
             a = (min_opacity - d) / math.atan(c)
             f = lambda x: a * math.atan(b * x + c) + d
