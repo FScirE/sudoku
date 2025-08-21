@@ -145,9 +145,10 @@ def notes_toggle(note_mode, buttons):
 
 def undo(history, sudoku, notes, colors):
     popped = history.pop()
-    sudoku.board = popped[0]
-    notes = popped[1]
-    colors = popped[2]
+    index = popped[0]
+    sudoku.board[index] = popped[1]
+    notes[index] = popped[2]
+    colors[index] = popped[3]
     return notes, colors
 
 def copy_board_info(sudoku, notes, colors):
@@ -157,13 +158,28 @@ def copy_board_info(sudoku, notes, colors):
     colors_copy = colors[:]
     return board_copy, fixed_copy, notes_copy, colors_copy
 
-def add_to_history(history, sudoku, notes, colors, board_old, notes_old, colors_old):
-    if sudoku.board == board_old and notes == notes_old and colors == colors_old:
-        pass
-    elif history and sudoku.board == history[-1][0] and notes == history[-1][1] and colors == history[-1][2]:
-        history.pop()
+def add_to_history(history, new_board_info, old_board_info):
+    if new_board_info == old_board_info:
+        return
     else:
-        history.append((board_old, notes_old, colors_old))
+        # get index of changed cell
+        board_diff_index = -1
+        for i in range(len(new_board_info[0])):
+            if new_board_info[0][i] != old_board_info[0][i]:
+                board_diff_index = i
+                break
+        notes_diff_index = -1
+        for i in range(len(new_board_info[1])):
+            if new_board_info[1][i] != old_board_info[1][i]:
+                notes_diff_index = i
+                break
+        diff_index = board_diff_index if board_diff_index != -1 else notes_diff_index
+        # store old board information
+        old_value = old_board_info[0][diff_index]
+        old_notes = old_board_info[1][diff_index]
+        old_color = old_board_info[2][diff_index]
+        # add to history
+        history.append((diff_index, old_value, old_notes, old_color))
 
 def erase(sudoku, notes, colors, selected, history):
     board_old, _, notes_old, colors_old = copy_board_info(sudoku, notes, colors)
@@ -172,7 +188,7 @@ def erase(sudoku, notes, colors, selected, history):
     notes[selected] = []
     colors[selected] = None
 
-    add_to_history(history, sudoku, notes, colors, board_old, notes_old, colors_old)
+    add_to_history(history, (sudoku.board, notes, colors), (board_old, notes_old, colors_old))
 
 def set_value(sudoku, notes, colors, selected, note_mode, number, history):
     board_old, _, notes_old, colors_old = copy_board_info(sudoku, notes, colors)
@@ -194,7 +210,7 @@ def set_value(sudoku, notes, colors, selected, note_mode, number, history):
         notes[selected] = []
         colors[selected] = current_color
 
-    add_to_history(history, sudoku, notes, colors, board_old, notes_old, colors_old)
+    add_to_history(history, (sudoku.board, notes, colors), (board_old, notes_old, colors_old))
 
 # transitions ------------------------------
 
