@@ -71,7 +71,8 @@ def graphical_print(sudoku, notes, colors, current_light_color = None, selected 
         if value == 0:
             continue
         color = black if sudoku.fixed[i] else cell_color[2]
-        text = font.render(f"{value}", True, color)
+        cell_font = bold_font if sudoku.fixed[i] else font
+        text = cell_font.render(f"{value}", True, color)
         rectangle = text.get_rect(center = (
             (i % 9 + 0.5) * cell_w + padding["left"],
             (i // 9 + 0.5) * cell_h + padding["top"]
@@ -84,11 +85,15 @@ def graphical_print(sudoku, notes, colors, current_light_color = None, selected 
         else:
             line_width = 1
         pygame.draw.line(screen, black,
-                        (i * (width - padding["left"] - padding["right"]) / 9 + padding["left"], padding["top"]),
-                        (i * (width - padding["left"] - padding["right"]) / 9 + padding["left"], height - padding["bottom"]), line_width)
+            (i * (width - padding["left"] - padding["right"]) / 9 + padding["left"], padding["top"]),
+            (i * (width - padding["left"] - padding["right"]) / 9 + padding["left"], height - padding["bottom"]), 
+            line_width
+        )
         pygame.draw.line(screen, black,
-                        (padding["left"], i * (height - padding["top"] - padding["bottom"]) / 9 + padding["top"]),
-                        (width - padding["right"], i * (height - padding["top"] - padding["bottom"]) / 9 + padding["top"]), line_width)
+            (padding["left"], i * (height - padding["top"] - padding["bottom"]) / 9 + padding["top"]),
+            (width - padding["right"], i * (height - padding["top"] - padding["bottom"]) / 9 + padding["top"]), 
+            line_width
+        )
 
 def update_buttons(buttons):
     # update the hovered state of all buttons and return hovered button
@@ -265,6 +270,7 @@ padding = {
 note_padding = 4
 font_size = 36
 font = pygame.font.Font("resources/arial.ttf", font_size)
+bold_font = pygame.font.Font("resources/arialbd.ttf", font_size)
 small_font = pygame.font.Font("resources/arial.ttf", font_size // 2)
 narrow_font = pygame.font.Font("resources/arialn.ttf", font_size // 2)
 large_font = pygame.font.Font("resources/arialbd.ttf", font_size * 2)
