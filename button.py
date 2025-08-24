@@ -16,9 +16,13 @@ class Button:
 
         self.is_hovered = False
 
-    def update(self, mouse_pos):
-        self.is_hovered = self.bounds.collidepoint(mouse_pos)
-        return self.is_hovered
+    def update(self):
+        mouse_pos = pygame.mouse.get_pos()
+        left_click = pygame.mouse.get_pressed(3)[0]
+        # click doesn't count as hover for button styling (looks better)
+        is_hovered = self.bounds.collidepoint(mouse_pos)
+        self.is_hovered = is_hovered and not left_click
+        return is_hovered
 
     def draw(self, screen, color_table):
         if self.shadow is not None:

@@ -3,7 +3,7 @@ import threading
 import copy
 import sys
 import pyperclip
-from sudoku import Sudoku
+from sudoku import Sudoku, conflicts
 from button import Button
 from textbox import Textbox
 from progressbar import ProgressBar
@@ -32,29 +32,48 @@ def check_quit(events, threads = None, quit_signal = None):
             pygame.quit()
             sys.exit()
 
+def draw_stripes(color, factor, thickness, left, top, width, height):
+    for n in range(1, factor):
+        pygame.draw.line(
+            screen, 
+            color,
+            (left, top + n * (height / factor)),
+            (left + n * (width / factor), top),
+            thickness
+        )  
+    for n in range(factor):
+        pygame.draw.line(
+            screen,
+            color,
+            (left + n * (width / factor), top + height),
+            (left + width, top + n * (height / factor)),
+            thickness
+        )
+
 def graphical_print(sudoku, notes, colors, current_light_color = None, selected = None, shadow = None):
     # draw shadow
     if shadow is not None:
         shadow.draw(screen)
     # draw cells
     for i in range(81):
+        value = sudoku.board[i]
         if colors[i] is not None:
             cell_color = color_table[colors[i]]
         else:
             cell_color = None
         cell_w = (width - padding["left"] - padding["right"]) / 9
         cell_h = (height - padding["top"] - padding["bottom"]) / 9
+        cell_left = (i % 9) * cell_w + padding["left"]
+        cell_top = (i // 9) * cell_h + padding["top"]
         # draw selected marking
         cell_bg = white
         if selected is not None and i == selected:
-            cell_bg = current_light_color
-        rect = pygame.rect.Rect(
-            (i % 9) * cell_w + padding["left"],
-            (i // 9) * cell_h + padding["top"],
-            cell_w,
-            cell_h
-        )
+            cell_bg = current_light_color     
+        rect = pygame.rect.Rect(cell_left, cell_top, cell_w, cell_h)
         pygame.draw.rect(screen, cell_bg, rect)
+        # conflicting cells marked
+        if value != 0 and conflicts(sudoku.board, i, value):      
+            draw_stripes(gray, 5, 4, cell_left, cell_top, cell_w, cell_h)  
         # draw notes
         cell_notes = notes[i]
         for note in cell_notes:
@@ -67,7 +86,6 @@ def graphical_print(sudoku, notes, colors, current_light_color = None, selected 
             ))
             screen.blit(text, rectangle)
         # draw cell values
-        value = sudoku.board[i]
         if value == 0:
             continue
         color = black if sudoku.fixed[i] else cell_color[2]
@@ -99,8 +117,12 @@ def update_buttons(buttons):
     # update the hovered state of all buttons and return hovered button
     hovered = None
     for button in buttons:
-        if button.update(pygame.mouse.get_pos()):
+        if button.update():
             hovered = button
+    if hovered is not None:
+        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+    else:
+        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
     return hovered
 
 def draw_buttons(buttons):
@@ -108,11 +130,7 @@ def draw_buttons(buttons):
     for button in buttons:
         if not hovered and button.is_hovered:
             hovered = True
-        button.draw(screen, current_color_table)
-    if hovered:
-        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
-    else:
-        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+        button.draw(screen, current_color_table) 
 
 def create_default_shadow(pos, size, border_radius = [-1, -1, -1, -1], extra_offset = [0, 0], extra_extra_size = 0):
     strength = 60
@@ -280,6 +298,7 @@ corner_border_radius = [0, 0, 0, 8]
 
 transparent_white = (255, 255, 255, 128)
 white = (255, 255, 255)
+gray = (200, 200, 200)
 black = (0, 0, 0)
 
 # blue
@@ -557,7 +576,7 @@ while True:
 
         print("Removing numbers...")
         quit_signal = threading.Event()
-        thread = threading.Thread(target=sudoku.remove_board_numbers, args=(difficulty, False), kwargs={"quit_signal": quit_signal,})
+        thread = threading.Thread(target=sudoku.remove_board_numbers, args=(difficulty, True), kwargs={"quit_signal": quit_signal,})
         thread.start()
         while thread.is_alive():
             screen.fill(white)
@@ -798,7 +817,7 @@ while True:
                     break
                 elif selected is not None and not sudoku.fixed[selected]:
                     # erasing
-                    if event.key in [pygame.K_BACKSPACE, pygame.K_SPACE, pygame.K_0, pygame.K_KP0]:
+                    if event.key in [pygame.K_BACKSPACE, pygame.K_SPACE, pygame.K_DELETE, pygame.K_0, pygame.K_KP0]:
                         erase(sudoku, notes, colors, selected, history)
                     # setting number
                     elif pygame.K_1 <= event.key <= pygame.K_9 or pygame.K_KP1 <= event.key <= pygame.K_KP9:

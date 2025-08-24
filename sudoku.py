@@ -56,12 +56,14 @@ class Sudoku:
                 threads = []
                 options = []
                 # start looking for multiple values to remove simultaneously
-                num_cores = os.cpu_count()
+                thread_limit = os.cpu_count()
+                if thread_limit > 8:
+                    thread_limit = 8
                 num_remaining = len(remaining)
                 if num_remaining > 32:
                     num_threads = 1
-                elif num_remaining > num_cores:
-                    num_threads = num_cores
+                elif num_remaining > thread_limit:
+                    num_threads = thread_limit
                 else:
                     num_threads = num_remaining
                 for _ in range(num_threads):
