@@ -117,6 +117,8 @@ class Sudoku:
                         continue
                 if zero_r > 2:
                     str_r += f"{hex(zero_r)}"
+                elif zero_r == 2:
+                    str_r += "d"
                 else:
                     str_r += "0" * zero_r
                 if value_r != 0:
@@ -138,6 +140,8 @@ class Sudoku:
                         continue
                 if zero_c > 2:
                     str_c += f"{hex(zero_c)}"
+                elif zero_c == 2:
+                    str_c += "d"
                 else:
                     str_c += "0" * zero_c
                 if value_c != 0:
@@ -162,9 +166,13 @@ class Sudoku:
             if counter >= 81:
                 return False
             # invalid symbol
-            if not string[i].isnumeric():
+            if not string[i].isnumeric() and string[i] != "d":
                 return False
-            if string[i] != "0":
+            if string[i] == "d":
+                # exactly 2 zeros in a row
+                counter += 1
+            elif string[i] != "0":
+                # not 0
                 if direction == "r":
                     # row direction
                     board[counter] = int(string[i])
@@ -174,6 +182,7 @@ class Sudoku:
                     board[(counter * 9 + counter // 9) % 81] = int(string[i])
                     fixed[(counter * 9 + counter // 9) % 81] = True
             elif i < len(string) - 1 and string[i + 1] == "x":
+                # more than 2 zeros in a row
                 if string[i + 2] not in ["1", "2"]:
                     counter += int(string[i:i+3], base=0)
                     i += 3

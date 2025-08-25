@@ -3,6 +3,8 @@ import threading
 import copy
 import sys
 import pyperclip
+import os
+import json
 from sudoku import Sudoku, conflicts
 from button import Button
 from textbox import Textbox
@@ -16,7 +18,7 @@ def tuple_sub(t1, t2):
         return t1
     return tuple([t1[i] - t2[i] for i in range(len(t1))])
 
-def check_quit(events, threads = None, quit_signal = None):
+def check_quit(events, threads = None, quit_signal = None, sudoku = None, notes = None, colors = None, history = None):
     for event in events:
         if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
             if quit_signal is not None:
@@ -29,24 +31,26 @@ def check_quit(events, threads = None, quit_signal = None):
                 pygame.display.update()
                 for t in threads:
                     t.join()
+            if None not in [sudoku, notes, colors, history]:
+                write_savegame(sudoku.board, sudoku.fixed, notes, colors, history)
             pygame.quit()
             sys.exit()
 
-def draw_stripes(color, factor, thickness, left, top, width, height):
+def draw_stripes(color, factor, thickness, left, top, width, height, flipped = False):
     for n in range(1, factor):
         pygame.draw.line(
             screen, 
             color,
-            (left, top + n * (height / factor)),
-            (left + n * (width / factor), top),
+            (left, top + (factor - n if flipped else n) * (height / factor)),
+            (left + n * (width / factor), top + (height if flipped else 0)),
             thickness
         )  
     for n in range(factor):
         pygame.draw.line(
             screen,
             color,
-            (left + n * (width / factor), top + height),
-            (left + width, top + n * (height / factor)),
+            (left + n * (width / factor), top + (0 if flipped else height)),
+            (left + width, top + (factor - n if flipped else n) * (height / factor)),
             thickness
         )
 
@@ -73,7 +77,7 @@ def graphical_print(sudoku, notes, colors, current_light_color = None, selected 
         pygame.draw.rect(screen, cell_bg, rect)
         # conflicting cells marked
         if value != 0 and conflicts(sudoku.board, i, value):      
-            draw_stripes(gray, 5, 4, cell_left, cell_top, cell_w, cell_h)  
+            draw_stripes(gray, 6, 3, cell_left, cell_top, cell_w, cell_h, True)  
         # draw notes
         cell_notes = notes[i]
         for note in cell_notes:
@@ -139,6 +143,21 @@ def create_default_shadow(pos, size, border_radius = [-1, -1, -1, -1], extra_off
     extra_size = 16 + extra_extra_size
     resolution = 50
     return Shadow(pos, size, strength, radius, border_radius, offset, extra_size, resolution)
+
+def write_savegame(board, fixed, notes, colors, history):
+    try:
+        file = open("./savegame.json", "w")
+        data = {
+            "board": board,
+            "fixed": fixed,
+            "notes": notes,
+            "colors": colors,
+            "history": history
+        }
+        json.dump(data, file, indent= 4)
+    except:
+        return False
+    return True
 
 # game functions ---------------------------
 
@@ -261,7 +280,7 @@ def fade(is_out, time, sudoku = None, notes = None, colors = None, grid_shadow =
         screen.blit(layer, (0, 0))
 
         events = pygame.event.get()
-        check_quit(events)
+        # check_quit(events) disable because of saving game not working properly with this
 
         time -= 1
         pygame.display.update()
@@ -334,11 +353,23 @@ screen.fill(white)
 
 # game -----------------------------------------
 
-# program loop
 sudoku = None
 notes = None
 colors = None
 history = None
+
+# load stored game if exists
+if os.path.exists("./savegame.json"):
+    file = open("./savegame.json", "r")
+    data = json.load(file)
+    sudoku = Sudoku()
+    sudoku.board = data["board"]
+    sudoku.fixed = data["fixed"]
+    notes = data["notes"]
+    colors = data["colors"]
+    history = data["history"]
+
+# program loop
 while True:
 
     # save current sudoku to be able to resume game
@@ -539,7 +570,7 @@ while True:
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_IBEAM)
         input.draw(screen, current_color_table)
 
-        check_quit(events)
+        check_quit(events, sudoku= saved_sudoku, notes= saved_notes, colors= saved_colors, history= saved_history)
 
         pygame.display.update()
         clock.tick(30)
@@ -601,7 +632,7 @@ while True:
             progress_bar.draw(screen, current_color_table)
 
             events = pygame.event.get()
-            check_quit(events, [thread], quit_signal)
+            check_quit(events, [thread], quit_signal, saved_sudoku, saved_notes, saved_colors, saved_history)
 
             pygame.display.update()
             clock.tick(60)
@@ -880,7 +911,7 @@ while True:
 
         draw_buttons(buttons)
 
-        check_quit(events)
+        check_quit(events, sudoku= sudoku, notes= notes, colors= colors, history= history)
 
         pygame.display.update()
         clock.tick(60)
@@ -979,7 +1010,7 @@ while True:
 
         draw_buttons(buttons)
 
-        check_quit(events)
+        check_quit(events, sudoku= sudoku, notes= notes, colors= colors, history= history)
 
         pygame.display.update()
         clock.tick(30)
