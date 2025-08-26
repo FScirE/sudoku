@@ -18,9 +18,9 @@ def tuple_sub(t1, t2):
         return t1
     return tuple([t1[i] - t2[i] for i in range(len(t1))])
 
-def check_quit(events, threads = None, quit_signal = None, sudoku = None, notes = None, colors = None, history = None):
+def check_quit(events, threads = None, quit_signal = None, sudoku = None, notes = None, colors = None, history = None, ignore_esc = False):
     for event in events:
-        if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+        if event.type == pygame.QUIT or (not ignore_esc and event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
             if quit_signal is not None:
                 quit_signal.set()
             if threads:
@@ -129,20 +129,16 @@ def update_buttons(buttons):
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
     return hovered
 
-def draw_buttons(buttons):
-    hovered = False
+def draw_buttons(buttons, surface):
     for button in buttons:
-        if not hovered and button.is_hovered:
-            hovered = True
-        button.draw(screen, current_color_table) 
+        button.draw(surface, current_color_table) 
 
-def create_default_shadow(pos, size, border_radius = [-1, -1, -1, -1], extra_offset = [0, 0], extra_extra_size = 0):
-    strength = 60
-    radius = 32
-    offset = [4 + extra_offset[0], 4 + extra_offset[1]]
-    extra_size = 16 + extra_extra_size
-    resolution = 50
-    return Shadow(pos, size, strength, radius, border_radius, offset, extra_size, resolution)
+def create_default_shadow(pos, size, border_radius = [-1, -1, -1, -1], extra_offset = [0, 0], extra_extra_size = 0, extra_radius = 0):
+    strength = 80
+    radius = 3 + extra_radius
+    offset = [2 + extra_offset[0], 2 + extra_offset[1]]
+    extra_size = extra_extra_size
+    return Shadow(pos, size, strength, radius, border_radius, offset, extra_size)
 
 def write_savegame(board, fixed, notes, colors, history):
     try:
@@ -256,7 +252,7 @@ def set_value(sudoku, notes, colors, selected, note_mode, number, history):
 
 # transitions ------------------------------
 
-def fade(is_out, time, sudoku = None, notes = None, colors = None, grid_shadow = None, buttons = None, current_color_table = None, text_rects = None, sudoku_overlay = None):
+def fade(is_out, time, sudoku = None, notes = None, colors = None, grid_shadow = None, buttons = None, current_color_table = None, text_rects = None, sudoku_overlay = None, extra_surface = None):
     # time is amount of frames to finish fading
     time_start = time
     while time > 0:
@@ -272,6 +268,8 @@ def fade(is_out, time, sudoku = None, notes = None, colors = None, grid_shadow =
         if text_rects is not None:
             for t in text_rects:
                 screen.blit(t[0], t[1])
+        if extra_surface is not None:
+            screen.blit(extra_surface, (0, 0))
 
         alpha = (1 - (time / time_start)) * 255 if is_out else (time / time_start) * 255
         overlay_color = (255, 255, 255, alpha)
@@ -279,8 +277,11 @@ def fade(is_out, time, sudoku = None, notes = None, colors = None, grid_shadow =
         layer.fill(overlay_color)
         screen.blit(layer, (0, 0))
 
-        events = pygame.event.get()
-        # check_quit(events) disable because of saving game not working properly with this
+
+        # disabled because of saving game not working properly with this
+        # events = pygame.event.get()
+        # check_quit(events) 
+        _ = pygame.event.get() # keep this for window not to freeze
 
         time -= 1
         pygame.display.update()
@@ -368,6 +369,7 @@ if os.path.exists("./savegame.json"):
     notes = data["notes"]
     colors = data["colors"]
     history = data["history"]
+    print("Loaded game from file")
 
 # program loop
 while True:
@@ -402,27 +404,8 @@ while True:
 
     # button and textbox setup for menu
     buttons = []
-    # easy button
-    button_width = 90
-    button_height = 60
-    pos = [width * 5 / 13 - button_width / 2, height * 19 / 40 - button_height / 2]
-    size = [button_width, button_height]
-    buttons.append(
-        Button(
-            pos,
-            size,
-            "dark",
-            "white",
-            "Easy",
-            small_font,
-            "generate",
-            36,
-            border_radius,
-            shadow= create_default_shadow(pos, size, border_radius)
-        )
-    )
-    # medium button
-    button_width = 100
+    # select difficulty button
+    button_width = 160
     button_height = 60
     pos = [width / 2 - button_width / 2, height * 19 / 40 - button_height / 2]
     size = [button_width, button_height]
@@ -432,30 +415,10 @@ while True:
             size,
             "dark",
             "white",
-            "Medium",
+            "Select Difficulty",
             small_font,
-            "generate",
-            18,
-            border_radius,
-            shadow= create_default_shadow(pos, size, border_radius)
-        )
-    )
-    # hard button
-    button_width = 90
-    button_height = 60
-    pos = [width * 8 / 13 - button_width / 2, height * 19 / 40 - button_height / 2]
-    size = [button_width, button_height]
-    buttons.append(
-        Button(
-            pos,
-            size,
-            "dark",
-            "white",
-            "Hard",
-            small_font,
-            "generate",
-            0,
-            border_radius,
+            "select",
+            border_radius= border_radius,
             shadow= create_default_shadow(pos, size, border_radius)
         )
     )
@@ -508,9 +471,100 @@ while True:
                 small_font,
                 "resume",
                 border_radius= corner_border_radius,
-                shadow= create_default_shadow(pos, size, corner_border_radius, [-4, -4])
+                shadow= create_default_shadow(pos, size, corner_border_radius, [-4, -4], 4)
             )
         )
+
+    # difficulty selection setup
+    selection_buttons = []
+    selection_menu = False
+    selection_width = 460
+    selection_height = 300
+    text_s = font.render("Select Difficulty", True, black)
+    rectangle_s = text_s.get_rect(center = (width / 2, height * 2 / 5))
+    # easy button
+    button_width = 90
+    button_height = 60
+    pos = [width * 5 / 13 - button_width / 2, height / 2 - button_height / 2]
+    size = [button_width, button_height]
+    selection_buttons.append(
+        Button(
+            pos,
+            size,
+            "dark",
+            "white",
+            "Easy",
+            small_font,
+            "generate",
+            36,
+            border_radius,
+            shadow= create_default_shadow(pos, size, border_radius)
+        )
+    )
+    # medium button
+    button_width = 100
+    button_height = 60
+    pos = [width / 2 - button_width / 2, height / 2 - button_height / 2]
+    size = [button_width, button_height]
+    selection_buttons.append(
+        Button(
+            pos,
+            size,
+            "dark",
+            "white",
+            "Medium",
+            small_font,
+            "generate",
+            18,
+            border_radius,
+            shadow= create_default_shadow(pos, size, border_radius)
+        )
+    )
+    # hard button
+    button_width = 90
+    button_height = 60
+    pos = [width * 8 / 13 - button_width / 2, height / 2 - button_height / 2]
+    size = [button_width, button_height]
+    selection_buttons.append(
+        Button(
+            pos,
+            size,
+            "dark",
+            "white",
+            "Hard",
+            small_font,
+            "generate",
+            0,
+            border_radius,
+            shadow= create_default_shadow(pos, size, border_radius)
+        )
+    )
+    # close button
+    button_width = 105
+    button_height = 60
+    pos = [width / 2 - button_width / 2, height * 3 / 5 - button_height / 2]
+    size = [button_width, button_height]
+    selection_buttons.append(
+        Button(
+            pos,
+            size,
+            "medium",
+            "white",
+            "Close",
+            small_font,
+            "close",
+            border_radius= border_radius,
+            shadow= create_default_shadow(pos, size, border_radius)
+        )
+    )
+    # selection menu shadow
+    selection_shadow = create_default_shadow(
+        ((width - selection_width) / 2, (height - selection_height) / 2),
+        (selection_width, selection_height),
+        border_radius,
+        extra_extra_size= 4,
+        extra_radius= 1
+    )
 
     # menu screen text
     text = large_font.render("SUDOKU", True, black)
@@ -531,14 +585,20 @@ while True:
         screen.blit(text, rectangle)
         screen.blit(text_u, rectangle_u)
 
-        button = update_buttons(buttons)
+        button = update_buttons(selection_buttons if selection_menu else buttons)
+
+        selection_menu_closed = False
 
         events = pygame.event.get()
         for event in events:
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-                if saved_sudoku is not None and not saved_sudoku.full():
-                    pre_game_loop = False
-                    resume_game = True
+            if event.type == pygame.KEYDOWN:            
+                if event.key == pygame.K_r:
+                    if saved_sudoku is not None and not saved_sudoku.full():
+                        pre_game_loop = False
+                        resume_game = True
+                elif selection_menu and event.key == pygame.K_ESCAPE:
+                    selection_menu = False
+                    selection_menu_closed = True
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if button is not None:
                     if button.id == "generate":
@@ -550,12 +610,17 @@ while True:
                     elif button.id == "resume":
                         pre_game_loop = False
                         resume_game = True
-                if input.hovered(event.pos):
-                    input.active = True
+                    elif button.id == "select":
+                        selection_menu = True
+                    elif button.id == "close":
+                        selection_menu = False
                 else:
-                    input.active = False
+                    if input.hovered(event.pos):
+                        input.active = True
+                    else:
+                        input.active = False
 
-        if input.handle_input(events):
+        if not selection_menu and input.handle_input(events):
             pre_game_loop = False
 
         # check if code gave a valid sudoku
@@ -564,19 +629,40 @@ while True:
                 pre_game_loop = True
                 input.content = ""
 
-        draw_buttons(buttons)
+        draw_buttons(buttons, screen)
 
-        if pygame.mouse.get_cursor().data[0] == pygame.SYSTEM_CURSOR_ARROW and input.hovered(pygame.mouse.get_pos()):
+        if pygame.mouse.get_cursor().data[0] == pygame.SYSTEM_CURSOR_ARROW and input.hovered(pygame.mouse.get_pos()) and not selection_menu:
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_IBEAM)
         input.draw(screen, current_color_table)
 
-        check_quit(events, sudoku= saved_sudoku, notes= saved_notes, colors= saved_colors, history= saved_history)
+        # draw selection menu overlay
+        if selection_menu:
+            layer = pygame.surface.Surface((width, height), pygame.SRCALPHA)
+            layer.fill(transparent_white)
+            selection_shadow.draw(layer)
+            menu_rect = pygame.rect.Rect(
+                (width - selection_width) / 2,
+                (height - selection_height) / 2,
+                selection_width,
+                selection_height
+            )
+            pygame.draw.rect(layer, white, menu_rect, 
+                border_top_left_radius= border_radius[0],
+                border_top_right_radius= border_radius[1],
+                border_bottom_left_radius= border_radius[2],
+                border_bottom_right_radius= border_radius[3]
+            )
+            layer.blit(text_s, rectangle_s)         
+            draw_buttons(selection_buttons, layer)
+            screen.blit(layer, (0, 0))
+
+        check_quit(events, sudoku= saved_sudoku, notes= saved_notes, colors= saved_colors, history= saved_history, ignore_esc= selection_menu_closed)
 
         pygame.display.update()
         clock.tick(30)
 
     # fade out before generation / sudoku start
-    fade(True, 10, buttons= buttons + [input], current_color_table= current_color_table, text_rects= [(text, rectangle), (text_u, rectangle_u)])
+    fade(True, 10, buttons= buttons + [input], current_color_table= current_color_table, text_rects= [(text, rectangle), (text_u, rectangle_u)], extra_surface= (layer if generate else None))
 
     if generate:
         # generate random sudoku
@@ -801,7 +887,7 @@ while True:
             small_font,
             "back",
             border_radius= corner_border_radius,
-            shadow= create_default_shadow(pos, size, corner_border_radius, [-4, -4])
+            shadow= create_default_shadow(pos, size, corner_border_radius, [-4, -4], 4)
         )
     )
 
@@ -818,7 +904,7 @@ while True:
 
     # game loop
     return_menu = False
-    while True:
+    while not return_menu:
         screen.fill(white)
 
         if sudoku.full():
@@ -904,14 +990,11 @@ while True:
                 elif event.button == 3:
                     selected = None
 
-        if return_menu:
-            break
-
         graphical_print(sudoku, notes, colors, current_color_table["light"], selected, grid_shadow)
 
-        draw_buttons(buttons)
+        draw_buttons(buttons, screen)
 
-        check_quit(events, sudoku= sudoku, notes= notes, colors= colors, history= history)
+        check_quit(events, sudoku= sudoku, notes= notes, colors= colors, history= history, ignore_esc= return_menu)
 
         pygame.display.update()
         clock.tick(60)
@@ -1008,7 +1091,7 @@ while True:
                         elif button.id == "copy":
                             pyperclip.copy(code)
 
-        draw_buttons(buttons)
+        draw_buttons(buttons, screen)
 
         check_quit(events, sudoku= sudoku, notes= notes, colors= colors, history= history)
 
