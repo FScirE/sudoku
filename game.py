@@ -141,7 +141,7 @@ def create_default_shadow(pos, size, border_radius = [-1, -1, -1, -1], extra_off
     return Shadow(pos, size, strength, radius, border_radius, offset, extra_size)
 
 def write_savegame(board, fixed, notes, colors, history):
-    file = open("./savegame.json", "w")
+    file = open("./data/savegame.json", "w")
     data = {
         "board": board,
         "fixed": fixed,
@@ -357,8 +357,10 @@ colors = None
 history = None
 
 # load stored game if exists
-if os.path.exists("./savegame.json"):
-    file = open("./savegame.json", "r")
+if not os.path.exists("./data/"):
+    os.mkdir("./data")
+if os.path.exists("./data/savegame.json"):
+    file = open("./data/savegame.json", "r")
     data = json.load(file)
     sudoku = Sudoku()
     sudoku.board = data["board"]
