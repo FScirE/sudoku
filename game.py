@@ -141,18 +141,15 @@ def create_default_shadow(pos, size, border_radius = [-1, -1, -1, -1], extra_off
     return Shadow(pos, size, strength, radius, border_radius, offset, extra_size)
 
 def write_savegame(board, fixed, notes, colors, history):
-    try:
-        file = open("./savegame.json", "w")
-        data = {
-            "board": board,
-            "fixed": fixed,
-            "notes": notes,
-            "colors": colors,
-            "history": history
-        }
-        json.dump(data, file, indent= 4)
-    except:
-        return False
+    file = open("./savegame.json", "w")
+    data = {
+        "board": board,
+        "fixed": fixed,
+        "notes": notes,
+        "colors": colors,
+        "history": history
+    }
+    json.dump(data, file, indent= 4)
     return True
 
 # game functions ---------------------------
@@ -907,11 +904,9 @@ while True:
     while not return_menu:
         screen.fill(white)
 
-        if sudoku.full():
-            if sudoku.valid():
-                break
-            else:
-                pass
+        # complete sudoku
+        if sudoku.full() and sudoku.valid():
+            break
 
         button = update_buttons(buttons)
 
