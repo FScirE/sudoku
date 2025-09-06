@@ -39,12 +39,12 @@ def check_quit(events, threads = None, quit_signal = None, sudoku = None, notes 
 def draw_stripes(color, factor, thickness, left, top, width, height, flipped = False):
     for n in range(1, factor):
         pygame.draw.line(
-            screen, 
+            screen,
             color,
             (left, top + (factor - n if flipped else n) * (height / factor)),
             (left + n * (width / factor), top + (height if flipped else 0)),
             thickness
-        )  
+        )
     for n in range(factor):
         pygame.draw.line(
             screen,
@@ -72,12 +72,12 @@ def graphical_print(sudoku, notes, colors, current_light_color = None, selected 
         # draw selected marking
         cell_bg = white
         if selected is not None and i == selected:
-            cell_bg = current_light_color     
+            cell_bg = current_light_color
         rect = pygame.rect.Rect(cell_left, cell_top, cell_w, cell_h)
         pygame.draw.rect(screen, cell_bg, rect)
         # conflicting cells marked
-        if value != 0 and conflicts(sudoku.board, i, value):      
-            draw_stripes(gray, 6, 3, cell_left, cell_top, cell_w, cell_h, True)  
+        if value != 0 and conflicts(sudoku.board, i, value):
+            draw_stripes(gray, 6, 3, cell_left, cell_top, cell_w, cell_h, True)
         # draw notes
         cell_notes = notes[i]
         for note in cell_notes:
@@ -108,12 +108,12 @@ def graphical_print(sudoku, notes, colors, current_light_color = None, selected 
             line_width = 1
         pygame.draw.line(screen, black,
             (i * (width - padding["left"] - padding["right"]) / 9 + padding["left"], padding["top"]),
-            (i * (width - padding["left"] - padding["right"]) / 9 + padding["left"], height - padding["bottom"]), 
+            (i * (width - padding["left"] - padding["right"]) / 9 + padding["left"], height - padding["bottom"]),
             line_width
         )
         pygame.draw.line(screen, black,
             (padding["left"], i * (height - padding["top"] - padding["bottom"]) / 9 + padding["top"]),
-            (width - padding["right"], i * (height - padding["top"] - padding["bottom"]) / 9 + padding["top"]), 
+            (width - padding["right"], i * (height - padding["top"] - padding["bottom"]) / 9 + padding["top"]),
             line_width
         )
 
@@ -131,7 +131,7 @@ def update_buttons(buttons):
 
 def draw_buttons(buttons, surface):
     for button in buttons:
-        button.draw(surface, current_color_table) 
+        button.draw(surface, current_color_table)
 
 def create_default_shadow(pos, size, border_radius = [-1, -1, -1, -1], extra_offset = [0, 0], extra_extra_size = 0, extra_radius = 0):
     strength = 80
@@ -208,13 +208,24 @@ def add_to_history(history, new_board_info, old_board_info):
             if new_board_info[1][i] != old_board_info[1][i]:
                 notes_diff_index = i
                 break
-        diff_index = board_diff_index if board_diff_index != -1 else notes_diff_index
-        # store old board information
+        colors_diff_index = -1
+        for i in range(len(new_board_info[1])):
+            if new_board_info[2][i] != old_board_info[2][i]:
+                colors_diff_index = i
+                break
+        diff_index = list(filter(lambda i: i > -1, [board_diff_index, notes_diff_index, colors_diff_index]))[0]
+        # store board information
         old_value = old_board_info[0][diff_index]
         old_notes = old_board_info[1][diff_index]
         old_color = old_board_info[2][diff_index]
+        new_value = new_board_info[0][diff_index]
+        new_notes = new_board_info[1][diff_index]
+        new_color = new_board_info[2][diff_index]
         # add to history
-        history.append((diff_index, old_value, old_notes, old_color))
+        if board_diff_index > -1 and history and history[-1] == (diff_index, new_value, new_notes, new_color):
+            history.pop()
+        else:
+            history.append((diff_index, old_value, old_notes, old_color))
 
 def erase(sudoku, notes, colors, selected, history):
     board_old, _, notes_old, colors_old = copy_board_info(sudoku, notes, colors)
@@ -225,7 +236,7 @@ def erase(sudoku, notes, colors, selected, history):
 
     add_to_history(history, (sudoku.board, notes, colors), (board_old, notes_old, colors_old))
 
-def set_value(sudoku, notes, colors, selected, note_mode, number, history):
+def set_value(sudoku, notes, colors, selected, note_mode, number, history, current_color):
     board_old, _, notes_old, colors_old = copy_board_info(sudoku, notes, colors)
 
     if note_mode:
@@ -240,7 +251,7 @@ def set_value(sudoku, notes, colors, selected, note_mode, number, history):
             notes[selected].remove(number)
             if not notes[selected]:
                 colors[selected] = None
-    elif sudoku.board[selected] != number:
+    else:
         sudoku.board[selected] = number
         notes[selected] = []
         colors[selected] = current_color
@@ -277,7 +288,7 @@ def fade(is_out, time, sudoku = None, notes = None, colors = None, grid_shadow =
 
         # disabled because of saving game not working properly with this
         # events = pygame.event.get()
-        # check_quit(events) 
+        # check_quit(events)
         _ = pygame.event.get() # keep this for window not to freeze
 
         time -= 1
@@ -590,7 +601,7 @@ while True:
 
         events = pygame.event.get()
         for event in events:
-            if event.type == pygame.KEYDOWN:            
+            if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
                     if saved_sudoku is not None and not saved_sudoku.full():
                         pre_game_loop = False
@@ -645,13 +656,13 @@ while True:
                 selection_width,
                 selection_height
             )
-            pygame.draw.rect(layer, white, menu_rect, 
+            pygame.draw.rect(layer, white, menu_rect,
                 border_top_left_radius= border_radius[0],
                 border_top_right_radius= border_radius[1],
                 border_bottom_left_radius= border_radius[2],
                 border_bottom_right_radius= border_radius[3]
             )
-            layer.blit(text_s, rectangle_s)         
+            layer.blit(text_s, rectangle_s)
             draw_buttons(selection_buttons, layer)
             screen.blit(layer, (0, 0))
 
@@ -939,7 +950,7 @@ while True:
                             number = event.key - pygame.K_0
                         else:
                             number = event.key - pygame.K_KP1 + 1
-                        set_value(sudoku, notes, colors, selected, note_mode, number, history)
+                        set_value(sudoku, notes, colors, selected, note_mode, number, history, current_color)
             # mouse events
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
@@ -975,7 +986,7 @@ while True:
                         elif button.id.count("num_"):
                             if selected is not None and not sudoku.fixed[selected]:
                                 number = button.value
-                                set_value(sudoku, notes, colors, selected, note_mode, number, history)
+                                set_value(sudoku, notes, colors, selected, note_mode, number, history, current_color)
                             button_pressed = True
                     # check board
                     if not button_pressed:
