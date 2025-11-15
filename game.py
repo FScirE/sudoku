@@ -149,8 +149,8 @@ def write_savegame(board, fixed, notes, colors, history, path = "./data"):
         "colors": colors,
         "history": history
     }
-    file.close()
     json.dump(data, file, indent= 4)
+    file.close()
 
 def read_savegame(path = "./data"):
     # load stored game if exists
@@ -167,6 +167,8 @@ def read_savegame(path = "./data"):
         history = data["history"]
         print("Loaded game from file")
         file.close()
+    else:
+        return None, None, None, None
     return sudoku, notes, colors, history
 
 # game functions ---------------------------
@@ -1020,6 +1022,8 @@ if __name__ == "__main__":
 
         # skip win screen
         if return_menu:
+            if None not in [sudoku, notes, colors, history]:
+                write_savegame(sudoku.board, sudoku.fixed, notes, colors, history)
             continue
 
         # button setup post game

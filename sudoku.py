@@ -13,7 +13,7 @@ class Sudoku:
         self.board = [0] * 81
         self.fixed = [True] * 81
 
-    def generate_completed_board(self):
+    def generate_completed_board(self) -> tuple[list[int], list[bool]]:
         # generate a solved sudoku
         row = 0
         stuck_row = 0
@@ -42,7 +42,7 @@ class Sudoku:
                 row -= 1
         return self.board, self.fixed
 
-    def remove_board_numbers(self, end = 0, multithread = True, quit_signal = None):
+    def remove_board_numbers(self, end = 0, multithread = True, quit_signal = None) -> tuple[list[int], list[bool]]:
         # remove numbers randomly until limit for how many numbers to check is reached
         remaining = [i for i in range(81)]
         random.shuffle(remaining)
@@ -91,16 +91,16 @@ class Sudoku:
                     self.fixed[remove] = False
         return self.board, self.fixed
 
-    def valid(self):
+    def valid(self) -> bool:
         return valid_board(self.board)
 
-    def full(self):
+    def full(self) -> bool:
         return full_board(self.board)
 
-    def print(self):
-        return print_board(self.board)
+    def print(self) -> None:
+        print_board(self.board)
 
-    def to_string(self):
+    def to_string(self) -> str:
         # row based string
         str_r = "r"
         zero_r = 0
@@ -150,7 +150,7 @@ class Sudoku:
         # return shortest option
         return str_r if len(str_r) <= len(str_c) else str_c
 
-    def from_string(self, string):
+    def from_string(self, string) -> bool:
         board = [0] * 81
         fixed = [False] * 81
         if not string:
@@ -204,8 +204,50 @@ class Sudoku:
         self.fixed = fixed
         return True
 
-    def solve(self):
+    def solve(self) -> None:
         self.board = solve_board(self.board[:], 1)[0]
+
+    def best_next_option(self) -> tuple[int, tuple[int, int, list[int], list[str]]]:
+        analysis_list = []
+        # get all possible options for all empty cells
+        for i in range(81):
+            row = i // 9
+            col = i % 9
+            # check if cell empty
+            if self.board[i] != 0:
+                continue
+            # get possible numbers and reasoning
+            available, messages = get_available_analysis(self.board, i)
+            # push to list of all possibilities
+            analysis_list.append((row, col, available, messages))
+        # return first option that only has one possible
+        no_guess_options = [a for a in analysis_list if len(a[2]) == 1]
+        if (len(no_guess_options) > 0):
+            return (0, no_guess_options[0])
+        # return best 50/50 guess
+        two_guess_options = [a for a in analysis_list if len(a[2]) == 2]
+        best_guess_options = list(filter(
+            lambda this: any(
+                (this is not other) and # not same cell
+                (
+                    this[0] == other[0] or # sharing row
+                    this[1] == other[1] or # sharing column
+                    (this[0] // 3 == other[0] // 3) and (this[1] // 3 == other[1] // 3) # sharing box
+                ) and
+                this[2] == other[2] # same options
+                for other in two_guess_options
+            ),
+            two_guess_options
+        ))
+        if (len(best_guess_options) > 0):
+            return (1, best_guess_options[0])
+        elif (len(two_guess_options) > 0):
+            return (2, two_guess_options[0])
+        # return first option or none
+        if (len(analysis_list) > 0):
+            return (3, analysis_list[0])
+        else:
+            return None, None
 
 #sudoku functions -------------------------
 
@@ -350,11 +392,11 @@ def conflicts(board, index, value):
         idx_col = col + 9 * j
         idx_block = ((row // 3) * 3 + j // 3) * 9 + (col // 3) * 3 + j % 3
         if idx_row != index and board[idx_row] == value:
-            return 1
+            return 1 # is conflicting in row
         elif idx_col != index and board[idx_col] == value:
-            return 2
+            return 2 # is conflicting in column
         elif idx_block != index and board[idx_block] == value:
-            return 3
+            return 3 # is conflicting in block
     return 0
 
 def full_board(board):
